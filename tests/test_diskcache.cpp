@@ -28,6 +28,11 @@ private slots:
     void clearRemovesEveryFile();
     void totalSizeBytesSumsAllFiles();
     void keysWithPathSeparatorsAreSanitized();
+    void beginWriteThenCommitWriteMakesKeyCached();
+    void beginWriteSupportsMultipleWriteCalls();
+    void commitWriteLeavesNoTmpFileBehind();
+    void discardWriteLeavesKeyUncachedAndNoTmpFile();
+    void beginWriteReturnsNullptrWhenDirCannotBeCreated();
 
 private:
     QTemporaryDir *m_dir = nullptr;
@@ -181,6 +186,68 @@ void TestDiskCache::keysWithPathSeparatorsAreSanitized() {
     const QString path = cache.store(QStringLiteral("../../etc/passwd"), QByteArrayLiteral("x"));
     QVERIFY(!path.isEmpty());
     QCOMPARE(QFileInfo(path).absolutePath(), QDir(m_dir->path()).absolutePath());
+}
+
+void TestDiskCache::beginWriteThenCommitWriteMakesKeyCached() {
+    DiskCache cache(QDir(m_dir->path()));
+    QFile *file = cache.beginWrite(QStringLiteral("a.bin"));
+    QVERIFY(file != nullptr);
+    file->write(QByteArrayLiteral("streamed bytes"));
+    const QString path = cache.commitWrite(QStringLiteral("a.bin"), file);
+    delete file;
+
+    QVERIFY(!path.isEmpty());
+    QVERIFY(cache.isCached(QStringLiteral("a.bin")));
+    QFile readBack(path);
+    QVERIFY(readBack.open(QIODevice::ReadOnly));
+    QCOMPARE(readBack.readAll(), QByteArrayLiteral("streamed bytes"));
+}
+
+void TestDiskCache::beginWriteSupportsMultipleWriteCalls() {
+    DiskCache cache(QDir(m_dir->path()));
+    QFile *file = cache.beginWrite(QStringLiteral("a.bin"));
+    QVERIFY(file != nullptr);
+    file->write(QByteArrayLiteral("first-"));
+    file->write(QByteArrayLiteral("second"));
+    const QString path = cache.commitWrite(QStringLiteral("a.bin"), file);
+    delete file;
+
+    QFile readBack(path);
+    QVERIFY(readBack.open(QIODevice::ReadOnly));
+    QCOMPARE(readBack.readAll(), QByteArrayLiteral("first-second"));
+}
+
+void TestDiskCache::commitWriteLeavesNoTmpFileBehind() {
+    DiskCache cache(QDir(m_dir->path()));
+    QFile *file = cache.beginWrite(QStringLiteral("a.bin"));
+    file->write(QByteArrayLiteral("x"));
+    cache.commitWrite(QStringLiteral("a.bin"), file);
+    delete file;
+
+    QVERIFY(!QFileInfo::exists(cache.filePathFor(QStringLiteral("a.bin")) + QStringLiteral(".tmp")));
+}
+
+void TestDiskCache::discardWriteLeavesKeyUncachedAndNoTmpFile() {
+    DiskCache cache(QDir(m_dir->path()));
+    QFile *file = cache.beginWrite(QStringLiteral("a.bin"));
+    file->write(QByteArrayLiteral("partial, network dropped"));
+    cache.discardWrite(QStringLiteral("a.bin"), file);
+    delete file;
+
+    QVERIFY(!cache.isCached(QStringLiteral("a.bin")));
+    QVERIFY(!QFileInfo::exists(cache.filePathFor(QStringLiteral("a.bin")) + QStringLiteral(".tmp")));
+}
+
+void TestDiskCache::beginWriteReturnsNullptrWhenDirCannotBeCreated() {
+    // A regular file where a directory needs to go - mkpath() can't create anything under it,
+    // so beginWrite() must fail to open the tmp file rather than crash or silently succeed.
+    QFile blocker(m_dir->path() + QStringLiteral("/blocker"));
+    QVERIFY(blocker.open(QIODevice::WriteOnly));
+    blocker.close();
+
+    DiskCache cache(QDir(m_dir->path() + QStringLiteral("/blocker/subdir")));
+    QFile *file = cache.beginWrite(QStringLiteral("a.bin"));
+    QVERIFY(file == nullptr);
 }
 
 QTEST_APPLESS_MAIN(TestDiskCache)

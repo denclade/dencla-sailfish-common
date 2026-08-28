@@ -6,31 +6,34 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QQueue>
-#include <QSet>
+#include <QHash>
 #include <QPair>
-#include <functional>
 #include "../cache/diskcache.h"
 
 // Concurrency-capped "fetch these URLs, write each into a DiskCache" queue - the shape shared
-// by harbour-sailreader's MediaCacheManager and harbour-wetterstein's RadarManager (both:
-// queue N URLs, run a handful concurrently, verify what comes back, write to a keyed disk
-// cache). Deliberately scoped to "many small-to-medium files, care about which finished, not
-// byte-level progress of any one of them" AND "one key produces exactly one cached file" -
-// harbour-audiobookfish's DownloadManager doesn't fit either constraint (a single large
-// per-book archive with byte-level progress UI, whose real result after extraction is many
-// files, not one) and should keep its own implementation rather than being forced to fit this
-// one. setRawDataFilter() below closes the gap for single-file transforms (decompress,
-// verify, ...) but deliberately not for anything that fans one download out into several
-// files - see its own comment.
+// by harbour-sailreader's MediaCacheManager, harbour-wetterstein's RadarManager, and
+// harbour-audiobookfish's DownloadManager (all: queue N URLs, run a handful concurrently,
+// verify what comes back, write to a keyed disk cache). Streams each download straight to its
+// DiskCache::beginWrite() tmp file as bytes arrive (QNetworkReply::readyRead), never buffering
+// a whole response in memory - the difference between a few KB (an article image, a radar
+// tile) and a few hundred MB (an audiobook archive) would otherwise be the difference between
+// fine and a real memory-pressure problem on a phone.
+//
+// Deliberately scoped to "one key produces exactly one cached file" - a download whose real
+// result is more than one file (e.g. extracting a multi-file zip archive into a directory,
+// harbour-audiobookfish's own DownloadManager) doesn't fit DiskCache's one-key-one-file model
+// at all. That's not this class's job either way: connect to downloaded() and do the
+// extraction yourself once the archive itself has landed in the cache, then DiskCache::remove()
+// the now-redundant cached archive - see harbour-audiobookfish's DownloadManager for exactly
+// that pattern.
 //
 // Owns its own QNetworkAccessManager rather than sharing one with an HttpApiClient the caller
 // might also have: an app's download URLs are frequently on a different host than its API
 // (arbitrary third-party image URLs embedded in synced content, for harbour-sailreader) where
 // reusing the API client's auth header would be actively wrong. setUserAgent()/setAuthHeader()/
 // setRequestTimeoutMs() below mirror HttpApiClient's own setters by name for a caller that
-// does want the same configuration applied to both (harbour-wetterstein's radar images share
-// the API's own proxy host, for instance) - deliberately duplicated setters, not a shared
-// instance, so the two classes stay independently usable.
+// does want the same configuration applied to both - deliberately duplicated setters, not a
+// shared instance, so the two classes stay independently usable.
 class DownloadQueue : public QObject {
     Q_OBJECT
 public:
@@ -38,9 +41,10 @@ public:
     // this DownloadQueue exists.
     explicit DownloadQueue(DiskCache *cache, QObject *parent = nullptr);
 
-    // How many downloads run concurrently. harbour-wetterstein's RadarManager hardcoded 5;
-    // exposed as a setter here since different content (small tiles vs. larger images) may
-    // want a different cap. Defaults to 4.
+    // How many downloads run concurrently. harbour-wetterstein's RadarManager hardcoded 5,
+    // harbour-audiobookfish's DownloadManager had no cap at all; exposed as a setter here
+    // since different content (small tiles vs. large archives) may want a different cap.
+    // Defaults to 4.
     void setMaxConcurrentDownloads(int max);
     // Sent as the User-Agent header on every download. Empty (the default) means don't set one.
     void setUserAgent(const QString &userAgent);
@@ -48,30 +52,15 @@ public:
     // an empty headerName to stop sending one. Off by default: most download sources (third-
     // party image URLs, a public radar tile proxy) neither need nor want the app's own API
     // credentials attached - a caller downloading from the same authenticated API it already
-    // talks to (unlike either current consumer of this class) opts in explicitly.
+    // talks to (harbour-audiobookfish's book archives) opts in explicitly. Re-callable at any
+    // time (e.g. after a token refresh) without losing whatever is already queued/in flight.
     void setAuthHeader(const QByteArray &headerName, const QByteArray &headerValue);
     // A download still running after this many ms is aborted (counted as a failure, same as
-    // any other network error). 0 disables the timeout. Defaults to 30000 (30s) - neither
-    // harbour-sailreader's nor harbour-wetterstein's own former download loops had a timeout
-    // at all, so a stuck download previously occupied a concurrency slot forever.
+    // any other network error). 0 disables the timeout. Defaults to 30000 (30s) - none of the
+    // three source apps' own former download loops had a timeout at all, so a stuck download
+    // previously occupied a concurrency slot (or, for harbour-audiobookfish, ran fully
+    // unbounded) forever.
     void setRequestTimeoutMs(int ms);
-
-    // Optional hook, run synchronously right after a download's bytes pass the integrity
-    // check and before they're written to the cache - lets a caller transform `data` in place
-    // (e.g. decompress a single-file gzip, verify a checksum) or reject it outright (return
-    // false, with *error set) before DiskCache::store() ever sees it. A std::function rather
-    // than a signal deliberately: with more than one slot connected, a signal mutating a
-    // shared QByteArray in place would have order-dependent, unclear semantics; a single
-    // settable hook has one well-defined owner. The outcome still surfaces through the normal
-    // downloaded()/downloadFailed() signals below either way - only the transform step itself
-    // is a function, not a broadcast.
-    //
-    // Not a general solution for a download whose real result is more than one file (e.g.
-    // extracting a multi-file zip archive into a directory) - that doesn't fit this class's
-    // one-key-one-cached-file model at all, hook or no hook, since DiskCache itself has no
-    // concept of "one key, many files". A download shaped like that needs its own handling
-    // outside this class regardless (see harbour-audiobookfish's DownloadManager).
-    void setRawDataFilter(const std::function<bool(const QString &cacheKey, QByteArray &data, QString *error)> &filter);
 
     // Enqueues one URL for download under the given cache key (see DiskCache::store()). Every
     // accepted call ends in exactly one downloaded()/downloadFailed() signal for that key,
@@ -85,12 +74,18 @@ public:
     // only "is this key covered right now".
     void enqueue(const QString &url, const QString &cacheKey);
 
+    // Cancels one specific download, whether still pending or already in flight, without
+    // touching any others - for a per-item "Cancel" action (e.g. a user tapping "Cancel" on
+    // one specific in-progress book download while others keep running). A no-op if cacheKey
+    // isn't currently queued/in-flight. Deliberately silent, same as cancelAll() below: neither
+    // downloaded() nor downloadFailed() fires for a cancelled key - the caller already knows
+    // it cancelled it and is expected to update its own state immediately rather than wait for
+    // a signal that (like any other OperationCanceledError) is never emitted.
+    void cancel(const QString &cacheKey);
     // Aborts every in-flight download and drops everything still pending, without touching
     // anything already written to the cache - for a "Clear Cache" action that wants to stop
     // downloads a moment before wiping the cache directory itself, rather than racing an
-    // in-flight write against the wipe. Each aborted reply's own finished() handler still
-    // fires (aborting is not silent), so idleChanged(true) follows shortly after this returns,
-    // not necessarily synchronously within the call.
+    // in-flight write against the wipe.
     void cancelAll();
 
     bool isIdle() const;
@@ -99,12 +94,20 @@ signals:
     // Emitted once per accepted enqueue() - see its own comment on when this fires for an
     // already-cached key.
     void downloaded(const QString &cacheKey, const QString &filePath);
-    // Emitted when a download fails - a real network error, a successful-looking reply whose
-    // body size doesn't match its own Content-Length header (a redirect or truncated response
-    // can come back with QNetworkReply::NoError and a short/empty body - see
+    // Emitted when a download fails - a real network error, or a successful-looking reply
+    // whose final size doesn't match its own Content-Length header (a redirect or truncated
+    // response can come back with QNetworkReply::NoError and a short/empty body - see
     // harbour-wetterstein's RadarManager, where this integrity check was first added after
-    // observing exactly that), or a rawDataFilter rejection.
+    // observing exactly that). Not emitted for a deliberate cancel() / cancelAll() - see their
+    // own comments.
     void downloadFailed(const QString &cacheKey, const QString &error);
+    // Raw passthrough of QNetworkReply::downloadProgress for an in-flight download - no
+    // throttling done here (harbour-audiobookfish's DownloadManager, the one consumer that
+    // cares about this at all, already has its own "max 5 UI updates/sec" throttling; baking
+    // a policy like that into this class would only constrain a future caller that wants
+    // different throttling, or none). bytesTotal is -1 if the server didn't send a
+    // Content-Length header.
+    void downloadProgress(const QString &cacheKey, qint64 bytesReceived, qint64 bytesTotal);
     // True once the queue has fully drained (nothing pending or in flight) - false again as
     // soon as enqueue() adds new work. Useful for a caller that wants to know when a batch of
     // enqueue() calls it just made has finished (e.g. to decide whether to retry an
@@ -125,10 +128,12 @@ private:
     QByteArray m_authHeaderName;
     QByteArray m_authHeaderValue;
     int m_requestTimeoutMs = 30000;
-    std::function<bool(const QString &, QByteArray &, QString *)> m_rawDataFilter;
     QQueue<QPair<QString, QString>> m_pendingQueue; // (url, cacheKey)
+    // Keyed by cacheKey rather than a plain QSet<QNetworkReply*> so cancel() can find one
+    // specific in-flight download directly instead of every caller needing its own
+    // key<->reply bookkeeping just to cancel a single item.
+    QHash<QString, QNetworkReply *> m_activeReplies;
     QSet<QString> m_queuedOrInFlightKeys;
-    QSet<QNetworkReply *> m_activeReplies;
     int m_maxConcurrentDownloads = 4;
     bool m_idle = true;
 };

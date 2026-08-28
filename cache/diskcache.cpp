@@ -32,17 +32,34 @@ bool DiskCache::isCached(const QString &key) const {
 }
 
 QString DiskCache::store(const QString &key, const QByteArray &data) {
-    const QString finalPath = filePathFor(key);
-    m_cacheDir.mkpath(QStringLiteral("."));
+    QFile *file = beginWrite(key);
+    if (!file) return QString();
 
-    const QString tmpPath = finalPath + QStringLiteral(".tmp");
-    QFile tmpFile(tmpPath);
-    if (!tmpFile.open(QIODevice::WriteOnly | QIODevice::Truncate) || tmpFile.write(data) != data.size()) {
-        tmpFile.close();
-        QFile::remove(tmpPath);
+    if (file->write(data) != data.size()) {
+        discardWrite(key, file);
+        delete file;
         return QString();
     }
-    tmpFile.close();
+
+    const QString path = commitWrite(key, file);
+    delete file;
+    return path;
+}
+
+QFile *DiskCache::beginWrite(const QString &key) {
+    m_cacheDir.mkpath(QStringLiteral("."));
+    QFile *file = new QFile(filePathFor(key) + QStringLiteral(".tmp"));
+    if (!file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        delete file;
+        return nullptr;
+    }
+    return file;
+}
+
+QString DiskCache::commitWrite(const QString &key, QFile *file) {
+    file->close();
+    const QString finalPath = filePathFor(key);
+    const QString tmpPath = finalPath + QStringLiteral(".tmp");
 
     QFile::remove(finalPath);
     if (!QFile::rename(tmpPath, finalPath)) {
@@ -50,6 +67,11 @@ QString DiskCache::store(const QString &key, const QByteArray &data) {
         return QString();
     }
     return finalPath;
+}
+
+void DiskCache::discardWrite(const QString &key, QFile *file) {
+    file->close();
+    QFile::remove(filePathFor(key) + QStringLiteral(".tmp"));
 }
 
 void DiskCache::remove(const QString &key) {

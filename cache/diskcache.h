@@ -5,6 +5,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QSet>
+#include <QFile>
 #include <QFileInfo>
 #include <functional>
 
@@ -23,6 +24,12 @@
 // QtConcurrent, as harbour-sailreader's MediaCacheManager::garbageCollect() does) is
 // responsible for that itself; this class doesn't know or care what thread it runs on, as long
 // as one instance isn't used concurrently from two threads without external synchronization.
+//
+// Not cache-location-specific despite the name, either - the constructor takes an arbitrary
+// QDir, so the exact same class works equally well rooted at a QStandardPaths::TempLocation
+// subdirectory instead of a CacheLocation one (see harbour-wetterstein's RadarManager, which
+// does exactly that via FileUtils::getTempDir()) - "cache" here means "keyed local storage of
+// derived/fetched data" in the general sense, not a specific standard-paths category.
 class DiskCache {
 public:
     explicit DiskCache(const QDir &cacheDir);
@@ -40,10 +47,30 @@ public:
     bool isCached(const QString &key) const;
 
     // Writes data under key and returns its path, or an empty string if the write failed.
-    // Writes to a ".tmp" sibling first and renames it into place afterwards, so a concurrent
-    // isCached()/filePathFor() check on another thread never observes a partially-written
-    // file - it only appears at its final name once the whole write has landed on disk.
+    // Atomic (see beginWrite()'s own comment) - a thin wrapper over beginWrite()/commitWrite()
+    // for a caller that already has the whole blob in memory. A caller receiving data
+    // incrementally (e.g. as a network reply streams in) should use beginWrite()/commitWrite()
+    // directly instead of buffering everything into a QByteArray first just to call this -
+    // see DownloadQueue, which does exactly that for potentially large downloads.
     QString store(const QString &key, const QByteArray &data);
+
+    // Opens key's ".tmp" sibling file for writing (WriteOnly|Truncate) and returns it - the
+    // caller writes to it directly, any number of times, as data becomes available, then calls
+    // exactly one of commitWrite()/discardWrite() when done (never both, never neither).
+    // Returns nullptr if the tmp file couldn't be opened. The caller owns the returned QFile -
+    // parent it to something for automatic cleanup, or delete it manually once
+    // commitWrite()/discardWrite() returns.
+    QFile *beginWrite(const QString &key);
+    // Closes `file` and renames its tmp path into key's final place - the same
+    // write-then-rename atomicity store() itself relies on: isCached()/filePathFor() on
+    // another thread never observe a partially-written file, only the fully-written one once
+    // this returns. Returns the final path, or an empty string if closing/renaming failed
+    // (treat like store() returning empty - don't assume the file exists).
+    QString commitWrite(const QString &key, QFile *file);
+    // Closes `file` and deletes the abandoned tmp file - for a beginWrite() that's being
+    // cancelled or failed instead of committed (e.g. the network connection dropped partway
+    // through a download).
+    void discardWrite(const QString &key, QFile *file);
 
     // Deletes the cached file for a key, if any. No-op if it doesn't exist.
     void remove(const QString &key);

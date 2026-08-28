@@ -3,6 +3,7 @@
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QBuffer>
 #include <QTimer>
 #include <QDebug>
 
@@ -85,7 +86,24 @@ QNetworkReply *HttpApiClient::sendCustomRequest(const QByteArray &verb, const QU
     QNetworkRequest request = buildRequest(url);
     if (!contentType.isEmpty()) request.setHeader(QNetworkRequest::ContentTypeHeader, contentType);
     if (requestTag.isValid()) request.setAttribute(QNetworkRequest::User, requestTag);
-    QNetworkReply *reply = m_networkAccessManager->sendCustomRequest(request, verb, body);
+
+    // QNetworkAccessManager::sendCustomRequest()'s QByteArray-body overload only exists from
+    // Qt 5.8 onward - the actual Sailfish OS SDK target ships Qt 5.6.3, where only the
+    // QIODevice* overload exists at all (confirmed directly: the QByteArray call here compiled
+    // fine against a newer host Qt but failed with an ambiguous-conversion error against the
+    // real SDK target). A QBuffer wrapping the QByteArray is the portable way to pass a fixed
+    // body through that older signature - it must outlive the request, so it's parented to the
+    // reply once that exists and cleaned up automatically once the reply itself is deleted.
+    QNetworkReply *reply;
+    if (body.isEmpty()) {
+        reply = m_networkAccessManager->sendCustomRequest(request, verb);
+    } else {
+        QBuffer *buffer = new QBuffer;
+        buffer->setData(body);
+        buffer->open(QIODevice::ReadOnly);
+        reply = m_networkAccessManager->sendCustomRequest(request, verb, buffer);
+        buffer->setParent(reply);
+    }
     armRequestTimeout(reply);
     return reply;
 }
