@@ -93,6 +93,16 @@ void DiskCache::purgeIf(const std::function<bool(const QFileInfo &)> &predicate)
 
 void DiskCache::purgeUnreferenced(const QSet<QString> &keepPaths) {
     purgeIf([&keepPaths](const QFileInfo &info) {
+        // A ".tmp" file is always some other in-progress beginWrite() - never a candidate for
+        // "unreferenced" eviction, no matter what keepPaths says. Its own final path (once
+        // committed) is what could ever legitimately appear in keepPaths; the ".tmp" itself
+        // never will, so without this check an unrelated download still streaming in when a
+        // caller (e.g. a post-sync garbage-collection pass, possibly running on another thread
+        // via QtConcurrent while the download itself runs on the main thread) happens to call
+        // this would have its ".tmp" deleted out from under it - the write looks like it
+        // "failed to write to cache" when commitWrite()'s rename can no longer find its source
+        // file, even though nothing was actually wrong with the download itself.
+        if (info.fileName().endsWith(QStringLiteral(".tmp"))) return false;
         return !keepPaths.contains(info.absoluteFilePath());
     });
 }

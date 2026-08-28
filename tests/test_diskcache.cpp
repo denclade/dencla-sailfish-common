@@ -25,6 +25,7 @@ private slots:
     void keyForUrlStripsQueryStringButKeepsExtension();
     void purgeIfDeletesOnlyMatchingFiles();
     void purgeUnreferencedKeepsOnlyListedPaths();
+    void purgeUnreferencedNeverDeletesInProgressTmpFiles();
     void clearRemovesEveryFile();
     void totalSizeBytesSumsAllFiles();
     void keysWithPathSeparatorsAreSanitized();
@@ -158,6 +159,26 @@ void TestDiskCache::purgeUnreferencedKeepsOnlyListedPaths() {
 
     QVERIFY(cache.isCached(QStringLiteral("keep.png")));
     QVERIFY(!cache.isCached(QStringLiteral("drop.png")));
+}
+
+void TestDiskCache::purgeUnreferencedNeverDeletesInProgressTmpFiles() {
+    // Regression test: a real sync would call this (via garbageCollect(), possibly from
+    // another thread) while a DownloadQueue elsewhere still has an unrelated download
+    // in-flight - keepPaths reflects only what's fully committed/referenced right now, so
+    // without the ".tmp" exclusion this would delete that download's ".tmp" file out from
+    // under it, and its eventual commitWrite() rename would then fail (confirmed as the real
+    // cause behind a "[MediaCacheManager] Download failed ... failed to write to cache" report
+    // seen right after a sync's own post-sync garbage collection pass).
+    DiskCache cache(QDir(m_dir->path()));
+    QFile *file = cache.beginWrite(QStringLiteral("in-progress.png"));
+    QVERIFY(file != nullptr);
+    file->write("partial data");
+    file->flush();
+
+    cache.purgeUnreferenced(QSet<QString>()); // nothing referenced - worst case for the sweep
+
+    QVERIFY(QFileInfo::exists(cache.filePathFor(QStringLiteral("in-progress.png")) + QStringLiteral(".tmp")));
+    delete file;
 }
 
 void TestDiskCache::clearRemovesEveryFile() {
