@@ -5,9 +5,13 @@ add_library(dencla_common_secrets STATIC
     secretsstore.h
     secretsstore.cpp
 )
+# SAILFISHSECRETS_INCLUDE_DIRS must be PUBLIC, not PRIVATE: secretsstore.h itself (a public
+# header, included by every consumer) directly includes <Secrets/secretmanager.h> - a
+# consumer's own translation units (e.g. an app's apiclient.cpp including secretsstore.h) need
+# this include path too, and PRIVATE would only apply it while compiling secretsstore.cpp
+# itself inside this library, not to anything that merely links against it.
 target_include_directories(dencla_common_secrets
-    PUBLIC ${DENCLA_COMMON_SOURCE_DIR}
-    PRIVATE ${SAILFISHSECRETS_INCLUDE_DIRS}
+    PUBLIC ${DENCLA_COMMON_SOURCE_DIR} ${SAILFISHSECRETS_INCLUDE_DIRS}
 )
 target_link_libraries(dencla_common_secrets PUBLIC Qt5::Core ${SAILFISHSECRETS_LDFLAGS})
 
