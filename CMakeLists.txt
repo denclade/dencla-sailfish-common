@@ -17,8 +17,13 @@ endif()
 # Used by each module's own CMakeLists.txt to find tests/test_*.cpp regardless of whether this
 # repo is the top-level source dir or nested under a consuming app's own CMAKE_SOURCE_DIR (that
 # variable refers to the OUTERMOST project once add_subdirectory()'d, not to this repo's own
-# root - this one always does).
+# root - this one always does). Also promoted to PARENT_SCOPE so a consuming app's own top-level
+# CMakeLists.txt (one level up from this add_subdirectory() call) can use it too - e.g. to
+# install shared qml/ files straight from here instead of keeping a local copy.
 set(DENCLA_COMMON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+if(NOT DENCLA_COMMON_IS_TOP_LEVEL)
+    set(DENCLA_COMMON_SOURCE_DIR ${DENCLA_COMMON_SOURCE_DIR} PARENT_SCOPE)
+endif()
 
 option(DENCLA_COMMON_BUILD_TESTS "Build dencla-sailfish-common's own unit tests" ON)
 if(DENCLA_COMMON_IS_TOP_LEVEL AND DENCLA_COMMON_BUILD_TESTS)
