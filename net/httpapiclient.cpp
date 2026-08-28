@@ -119,7 +119,14 @@ bool HttpApiClient::checkAndHandleError(QNetworkReply *reply, const QString &con
     if (reply->error() == QNetworkReply::NoError) return false;
 
     const QString message = extractErrorMessage(reply->readAll(), m_errorMessageJsonField, reply->errorString());
-    qWarning() << "[HttpApiClient]" << context << ":" << message;
+    // A deliberate abort() - by armRequestTimeout() above, or by a caller that grabbed the
+    // QNetworkReply* this class returned and cancelled it itself - isn't worth a qWarning(),
+    // same as DownloadQueue's own cancel()/cancelAll() staying silent. Still reported as a
+    // failure via the return value/errorMessage either way, so callers that do care can look at
+    // reply->error() themselves.
+    if (reply->error() != QNetworkReply::OperationCanceledError) {
+        qWarning() << "[HttpApiClient]" << context << ":" << message;
+    }
     if (errorMessage) *errorMessage = message;
     return true;
 }

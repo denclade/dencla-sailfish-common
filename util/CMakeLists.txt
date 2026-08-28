@@ -2,6 +2,7 @@ add_library(dencla_common_util STATIC
     fileutils.h
     fileutils.cpp
     qtsignalonce.h
+    httputils.h
 )
 target_include_directories(dencla_common_util PUBLIC ${DENCLA_COMMON_SOURCE_DIR})
 target_link_libraries(dencla_common_util PUBLIC Qt5::Core)

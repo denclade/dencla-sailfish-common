@@ -38,8 +38,16 @@ class DownloadQueue : public QObject {
     Q_OBJECT
 public:
     // cache is not owned - the caller keeps its own DiskCache instance alive for as long as
-    // this DownloadQueue exists.
+    // this DownloadQueue exists. That includes destruction order: if both are members of the
+    // same owning object with DiskCache declared before this class's own pointer to it (the
+    // pattern every current consumer uses, so its DiskCache is fully constructed before the
+    // DownloadQueue that references it), the DiskCache member is destructed FIRST regardless -
+    // Qt deletes QObject children (this DownloadQueue, parented to the owner) from inside
+    // ~QObject(), which only runs after the owner's own non-QObject members, DiskCache
+    // included, have already been destroyed. See ~DownloadQueue()'s own comment for how its
+    // cleanup deliberately avoids touching `cache` because of exactly this.
     explicit DownloadQueue(DiskCache *cache, QObject *parent = nullptr);
+    ~DownloadQueue();
 
     // How many downloads run concurrently. harbour-wetterstein's RadarManager hardcoded 5,
     // harbour-audiobookfish's DownloadManager had no cap at all; exposed as a setter here

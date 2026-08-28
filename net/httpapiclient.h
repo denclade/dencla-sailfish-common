@@ -57,7 +57,11 @@ public:
     // True (and *errorMessage set, if given) if reply finished with an error. Tries the JSON
     // error field configured via setErrorMessageJsonField() first, falls back to Qt's own
     // reply->errorString(). Also logs the error via qWarning(), prefixed with
-    // "[HttpApiClient] <context>:", so call sites don't each need their own logging for this.
+    // "[HttpApiClient] <context>:", so call sites don't each need their own logging for this -
+    // except for a deliberate abort() (this class's own request timeout, or a caller cancelling
+    // the QNetworkReply* it got back), which is still reported via the return value/
+    // *errorMessage but doesn't get a qWarning(), matching DownloadQueue's own cancel()/
+    // cancelAll() staying silent.
     // False (no side effects, reply's body left untouched) for a successful reply - callers
     // read the body themselves on success.
     bool checkAndHandleError(QNetworkReply *reply, const QString &context, QString *errorMessage = nullptr) const;

@@ -6,6 +6,25 @@ DownloadQueue::DownloadQueue(DiskCache *cache, QObject *parent)
     : QObject(parent), m_cache(cache) {
 }
 
+DownloadQueue::~DownloadQueue() {
+    // Deliberately doesn't call cancelAll() - aborting a reply synchronously triggers its own
+    // finished() lambda in downloadOne() below, which calls m_cache->discardWrite(). By the
+    // time a QObject child's destructor runs (Qt deletes children from inside ~QObject(), see
+    // this class's own constructor comment), a sibling DiskCache member declared earlier in the
+    // owning object may already be destroyed - calling into it here would be a use-after-free.
+    // So this only stops the network activity itself: disconnect first (so abort() below can't
+    // trigger the cache-touching finished() lambda at all), then abort and deleteLater() each
+    // reply, same as the plain QNetworkReply cleanup every consumer's own destructor used to
+    // hand-write before it had a DownloadQueue to delegate to. Any not-yet-committed .tmp file
+    // is left orphaned on disk rather than explicitly discarded - harmless, since isCached()
+    // never considers a .tmp file "cached," and a future cache sweep or reinstall clears it.
+    for (QNetworkReply *reply : m_activeReplies.values()) {
+        reply->disconnect();
+        reply->abort();
+        reply->deleteLater();
+    }
+}
+
 void DownloadQueue::setMaxConcurrentDownloads(int max) {
     m_maxConcurrentDownloads = max;
 }
@@ -137,7 +156,17 @@ void DownloadQueue::downloadOne(const QString &url, const QString &cacheKey) {
     // already has the whole blob; this just spreads the same writes out over the download's
     // lifetime.
     connect(reply, &QNetworkReply::readyRead, this, [reply, file]() {
-        file->write(reply->readAll());
+        const QByteArray chunk = reply->readAll();
+        if (file->write(chunk) != chunk.size()) {
+            // Most likely disk-full. Flagged as a QObject property on `reply` (rather than a
+            // dedicated member here) since the finished() lambda below needs to see it, and
+            // that's already how this method hands state across its two lambdas. Without this,
+            // a server that doesn't send Content-Length (chunked transfer encoding) would let a
+            // disk-full-truncated file pass the finished() handler's writtenSize check below,
+            // since that check only has the server's Content-Length to compare against when
+            // one was actually sent.
+            reply->setProperty("dencla_writeFailed", true);
+        }
     });
     connect(reply, &QNetworkReply::downloadProgress, this, [this, cacheKey](qint64 received, qint64 total) {
         emit downloadProgress(cacheKey, received, total);
@@ -147,11 +176,12 @@ void DownloadQueue::downloadOne(const QString &url, const QString &cacheKey) {
         m_activeReplies.remove(cacheKey);
         m_queuedOrInFlightKeys.remove(cacheKey);
 
+        const bool writeFailed = reply->property("dencla_writeFailed").toBool();
         const QVariant expectedSize = reply->header(QNetworkRequest::ContentLengthHeader);
         file->flush(); // make sure size() below reflects every write(), not just what's on disk yet
         const qint64 writtenSize = file->size();
 
-        if (reply->error() == QNetworkReply::NoError && writtenSize > 0
+        if (!writeFailed && reply->error() == QNetworkReply::NoError && writtenSize > 0
                 && (!expectedSize.isValid() || expectedSize.toLongLong() == writtenSize)) {
             const QString path = m_cache->commitWrite(cacheKey, file);
             if (!path.isEmpty()) {
@@ -161,7 +191,9 @@ void DownloadQueue::downloadOne(const QString &url, const QString &cacheKey) {
             }
         } else {
             m_cache->discardWrite(cacheKey, file);
-            if (reply->error() == QNetworkReply::NoError) {
+            if (writeFailed) {
+                emit downloadFailed(cacheKey, QStringLiteral("failed to write to cache file for %1").arg(url));
+            } else if (reply->error() == QNetworkReply::NoError) {
                 // NoError but either empty, or a size mismatch against the reply's own
                 // Content-Length - a redirect or truncated transfer landed as a "successful"
                 // reply with unusable content (see this class's own header comment).
