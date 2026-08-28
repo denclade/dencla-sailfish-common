@@ -28,6 +28,18 @@ void DownloadQueue::enqueue(const QString &url, const QString &cacheKey) {
     startNextDownloads();
 }
 
+void DownloadQueue::cancelAll() {
+    for (const auto &pending : m_pendingQueue) {
+        m_queuedOrInFlightKeys.remove(pending.second);
+    }
+    m_pendingQueue.clear();
+    // abort() still triggers each reply's own finished() lambda in downloadOne() below, which
+    // cleans up m_activeReplies/m_queuedOrInFlightKeys and re-checks idle state itself -
+    // nothing further to do with in-flight replies here.
+    for (QNetworkReply *reply : m_activeReplies) reply->abort();
+    if (m_pendingQueue.isEmpty() && m_activeReplies.isEmpty()) setIdle(true);
+}
+
 void DownloadQueue::startNextDownloads() {
     while (m_activeReplies.size() < m_maxConcurrentDownloads && !m_pendingQueue.isEmpty()) {
         const QPair<QString, QString> next = m_pendingQueue.dequeue();

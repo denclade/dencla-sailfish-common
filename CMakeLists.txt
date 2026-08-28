@@ -38,10 +38,19 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include(cmake/QtUnitTest.cmake)
 
 # Each module is opt-in per consuming app via target_link_libraries() - e.g.
-# harbour-wetterstein (no Secrets need) only links dencla_common_cache/dencla_common_net, not
-# dencla_common_secrets, so it never picks up a sailfishsecrets dependency it doesn't need. See
-# README.md for the full per-app wiring.
+# harbour-wetterstein (no Secrets need) only links dencla_common_cache/dencla_common_net. cache/
+# util/net only need Qt5, so they're always added - but secrets/ additionally does its own
+# pkg_search_module(... REQUIRED sailfishsecrets), which would hard-fail *configure* (not just
+# link) for a consuming app that doesn't even want it, in a build environment that lacks the
+# sailfishsecrets dev package (wetterstein's real device/CI environment, for instance). A
+# consuming app that needs it sets `set(DENCLA_COMMON_ENABLE_SECRETS ON)` BEFORE its
+# add_subdirectory() call on this repo (see harbour-sailreader's/harbour-audiobookfish's own
+# CMakeLists.txt) - a normal variable set by the parent scope shadows this option()'s own
+# default for every directory nested under it, including this one.
 add_subdirectory(cache)
 add_subdirectory(util)
 add_subdirectory(net)
-add_subdirectory(secrets)
+option(DENCLA_COMMON_ENABLE_SECRETS "Build the secrets module (requires sailfishsecrets)" OFF)
+if(DENCLA_COMMON_ENABLE_SECRETS)
+    add_subdirectory(secrets)
+endif()

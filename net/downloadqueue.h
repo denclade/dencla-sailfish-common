@@ -34,6 +34,14 @@ public:
     // queue immediately, respecting the concurrency cap.
     void enqueue(const QString &url, const QString &cacheKey);
 
+    // Aborts every in-flight download and drops everything still pending, without touching
+    // anything already written to the cache - for a "Clear Cache" action that wants to stop
+    // downloads a moment before wiping the cache directory itself, rather than racing an
+    // in-flight write against the wipe. Each aborted reply's own finished() handler still
+    // fires (aborting is not silent), so idleChanged(true) follows shortly after this returns,
+    // not necessarily synchronously within the call.
+    void cancelAll();
+
     bool isIdle() const;
 
 signals:
