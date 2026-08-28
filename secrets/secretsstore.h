@@ -39,7 +39,11 @@ public:
 
     Q_INVOKABLE void storeSecret(const QString &key, const QString &value);
     Q_INVOKABLE void retrieveSecret(const QString &key);
-    Q_INVOKABLE void deleteSecret(const QString &key);
+    // Named to match DiskCache::remove() (deleteSecret/secretDeleted would be an equally
+    // reasonable choice - "remove" was picked so the two keyed-store classes in this library
+    // use the same verb for "get rid of this stored item" rather than each mirroring its own
+    // underlying platform API's wording, which is what caused the mismatch to begin with).
+    Q_INVOKABLE void removeSecret(const QString &key);
 
 signals:
     void secretStored(const QString &key, bool ok, const QString &error);
@@ -50,7 +54,7 @@ signals:
     // the secret or ask the user to re-enter it - see harbour-sailreader's
     // SyncEngine::needsDeviceUnlock for the pattern this distinction exists to support.
     void secretRetrieved(const QString &key, const QString &value, bool ok, bool locked, const QString &error);
-    void secretDeleted(const QString &key, bool ok, const QString &error);
+    void secretRemoved(const QString &key, bool ok, const QString &error);
 
 private:
     void ensureCollection(const std::function<void(bool ok, const QString &error)> &onReady);

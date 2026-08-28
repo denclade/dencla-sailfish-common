@@ -5,7 +5,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QSet>
-#include <QDateTime>
+#include <QFileInfo>
 #include <functional>
 
 // Generic keyed blob-on-disk cache - the mechanics every app's own cache class
@@ -52,14 +52,17 @@ public:
     // have the URL, not the original key, at hand.
     void removeByFileUrl(const QString &fileUrl);
 
-    // Deletes every cached file for which predicate(fileName, lastModified) returns true - an
-    // age/name-pattern-based eviction policy (e.g. "delete anything older than 3 hours whose
-    // name starts with radar_"). The caller owns the policy; this just walks the directory and
-    // applies it.
-    void purgeIf(const std::function<bool(const QString &fileName, const QDateTime &lastModified)> &predicate);
+    // Deletes every cached file for which predicate(fileInfo) returns true - an age/name-
+    // pattern-based eviction policy (e.g. "delete anything older than 3 hours whose name
+    // starts with radar_"). The caller owns the policy; this just walks the directory and
+    // applies it. Takes the full QFileInfo (not just name/mtime) so a predicate that needs the
+    // absolute path (see purgeUnreferenced() below, which is built on top of this) or size
+    // doesn't need a second directory-walk implementation of its own.
+    void purgeIf(const std::function<bool(const QFileInfo &fileInfo)> &predicate);
     // Deletes every cached file whose full path is NOT in keepPaths - a "reference-counted"
     // eviction policy (e.g. "keep only images still referenced by some article's content, drop
-    // everything else"), as opposed to purgeIf()'s "is this file itself stale" question.
+    // everything else"), as opposed to purgeIf()'s "is this file itself stale" question. A thin
+    // purgeIf() call underneath, not a separate directory walk.
     void purgeUnreferenced(const QSet<QString> &keepPaths);
 
     // Deletes every file in the cache directory.

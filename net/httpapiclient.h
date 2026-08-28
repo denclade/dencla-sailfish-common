@@ -46,6 +46,13 @@ public:
                         const QVariant &requestTag = QVariant());
     QNetworkReply *post(const QUrl &url, const QByteArray &body, const QByteArray &contentType,
                          const QVariant &requestTag = QVariant());
+    // Covers any verb get()/put()/post() don't (PATCH, DELETE, ...) via
+    // QNetworkAccessManager::sendCustomRequest() - same auth/UA/timeout handling as the three
+    // above, just not worth a dedicated method per HTTP verb. body/contentType may be empty
+    // (e.g. for a bodyless DELETE).
+    QNetworkReply *sendCustomRequest(const QByteArray &verb, const QUrl &url, const QByteArray &body = QByteArray(),
+                                      const QByteArray &contentType = QByteArray(),
+                                      const QVariant &requestTag = QVariant());
 
     // True (and *errorMessage set, if given) if reply finished with an error. Tries the JSON
     // error field configured via setErrorMessageJsonField() first, falls back to Qt's own

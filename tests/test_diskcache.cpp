@@ -136,8 +136,8 @@ void TestDiskCache::purgeIfDeletesOnlyMatchingFiles() {
     cache.store(QStringLiteral("keep.png"), QByteArrayLiteral("x"));
     cache.store(QStringLiteral("drop.png"), QByteArrayLiteral("x"));
 
-    cache.purgeIf([](const QString &fileName, const QDateTime &) {
-        return fileName == QStringLiteral("drop.png");
+    cache.purgeIf([](const QFileInfo &info) {
+        return info.fileName() == QStringLiteral("drop.png");
     });
 
     QVERIFY(cache.isCached(QStringLiteral("keep.png")));

@@ -148,7 +148,7 @@ void SecretsStore::retrieveSecret(const QString &key) {
     request->startRequest();
 }
 
-void SecretsStore::deleteSecret(const QString &key) {
+void SecretsStore::removeSecret(const QString &key) {
     DeleteSecretRequest *request = new DeleteSecretRequest(this);
     request->setManager(&m_secretManager);
     request->setIdentifier(Secret::Identifier(key, m_collectionName, SecretManager::DefaultEncryptedStoragePluginName));
@@ -159,9 +159,9 @@ void SecretsStore::deleteSecret(const QString &key) {
         const Result result = request->result();
         const bool ok = result.code() == Result::Succeeded;
         if (!ok) {
-            qWarning() << "[SecretsStore] Failed to delete secret" << key << ":" << result.errorMessage();
+            qWarning() << "[SecretsStore] Failed to remove secret" << key << ":" << result.errorMessage();
         }
-        emit secretDeleted(key, ok, ok ? QString() : result.errorMessage());
+        emit secretRemoved(key, ok, ok ? QString() : result.errorMessage());
         request->deleteLater();
     });
     request->startRequest();

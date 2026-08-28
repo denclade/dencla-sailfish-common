@@ -60,22 +60,19 @@ void DiskCache::removeByFileUrl(const QString &fileUrl) {
     QFile::remove(QUrl(fileUrl).toLocalFile());
 }
 
-void DiskCache::purgeIf(const std::function<bool(const QString &, const QDateTime &)> &predicate) {
+void DiskCache::purgeIf(const std::function<bool(const QFileInfo &)> &predicate) {
     if (!m_cacheDir.exists()) return;
     for (const QFileInfo &info : m_cacheDir.entryInfoList(QDir::Files)) {
-        if (predicate(info.fileName(), info.lastModified())) {
+        if (predicate(info)) {
             QFile::remove(info.absoluteFilePath());
         }
     }
 }
 
 void DiskCache::purgeUnreferenced(const QSet<QString> &keepPaths) {
-    if (!m_cacheDir.exists()) return;
-    for (const QFileInfo &info : m_cacheDir.entryInfoList(QDir::Files)) {
-        if (!keepPaths.contains(info.absoluteFilePath())) {
-            QFile::remove(info.absoluteFilePath());
-        }
-    }
+    purgeIf([&keepPaths](const QFileInfo &info) {
+        return !keepPaths.contains(info.absoluteFilePath());
+    });
 }
 
 void DiskCache::clear() {

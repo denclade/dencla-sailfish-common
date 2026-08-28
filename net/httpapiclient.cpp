@@ -80,6 +80,16 @@ QNetworkReply *HttpApiClient::post(const QUrl &url, const QByteArray &body, cons
     return reply;
 }
 
+QNetworkReply *HttpApiClient::sendCustomRequest(const QByteArray &verb, const QUrl &url, const QByteArray &body,
+                                                 const QByteArray &contentType, const QVariant &requestTag) {
+    QNetworkRequest request = buildRequest(url);
+    if (!contentType.isEmpty()) request.setHeader(QNetworkRequest::ContentTypeHeader, contentType);
+    if (requestTag.isValid()) request.setAttribute(QNetworkRequest::User, requestTag);
+    QNetworkReply *reply = m_networkAccessManager->sendCustomRequest(request, verb, body);
+    armRequestTimeout(reply);
+    return reply;
+}
+
 QString HttpApiClient::extractErrorMessage(const QByteArray &body, const QString &jsonField, const QString &fallback) {
     if (jsonField.isEmpty()) return fallback;
     const QJsonObject errorJson = QJsonDocument::fromJson(body).object();
