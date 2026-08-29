@@ -1,2 +1,12 @@
 build/
 *.moc
+
+# This repo gets add_subdirectory()'d into consuming apps' own in-place sfdk builds (no
+# separate build/ dir there - see each app's own build workflow), so CMake/make artifacts
+# land directly in this repo's own tree (root and per-module) instead of under build/ above.
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+*_autogen/
+*.a
