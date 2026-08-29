@@ -45,6 +45,13 @@ DockedItem {
         width: parent.width
         active: root.active
         canHide: root.canHide
+        // Tapping the virtual keyboard's own enter/done key closes the keyboard without also
+        // closing search itself (that's still only ever the caller's own hideClicked()/active
+        // handling) - a plain focus loss, not an accept/commit action, since the debounced
+        // queryChanged() below already fires on its own regardless of whether the keyboard is
+        // still open.
+        EnterKey.iconSource: "image://theme/icon-m-enter-close"
+        EnterKey.onClicked: focus = false
         onHideClicked: root.hideClicked()
         onActiveChanged: {
             if (active) {
