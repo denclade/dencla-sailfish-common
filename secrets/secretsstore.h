@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVector>
 #include <functional>
 #include <Secrets/secretmanager.h>
 
@@ -18,6 +19,14 @@
 // CustomLock reasoning and the Sailjail-ApplicationName pitfall that looks like a DeviceLock
 // failure but isn't), OwnerOnlyMode, DeviceLockKeepUnlocked, and the default encrypted storage
 // plugin for both storage and encryption.
+//
+// Requests are SERIALISED: one goes to the daemon at a time, the rest wait their turn. The
+// daemon serves one interactive request at a time, and a second one arriving while the first
+// is still waiting for the user's authorisation prompt gets a second prompt - an empty, broken
+// one - after which both fail. Confirmed on device: an app whose constructors asked for four
+// secrets at once got exactly that, while apps asking for a single secret never saw it. This
+// costs nothing in the normal case, because once the first request is authorised the
+// collection stays unlocked and everything queued behind it goes through without prompting.
 //
 // storeSecret() is idempotent in the face of a stale secret already sitting under the same
 // identifier (e.g. a schema/database reset that starts a fresh account row - and therefore a
@@ -58,12 +67,26 @@ signals:
 
 private:
     void ensureCollection(const std::function<void(bool ok, const QString &error)> &onReady);
-    void doStoreSecret(const QString &key, const QString &value, bool isRetryAfterDelete);
-    void deleteExistingThenRetryStore(const QString &key, const QString &value);
+    void doStoreSecret(const QString &key, const QString &value, bool isRetryAfterDelete, qint64 generation);
+    void deleteExistingThenRetryStore(const QString &key, const QString &value, qint64 generation);
+
+    // See the class comment. An "operation" is one public call from start to the signal that
+    // answers it - a store that has to delete a stale secret first is still one operation, so
+    // nothing else can slip in between its two halves.
+    void enqueue(const std::function<void()> &operation);
+    void runNextOperation();
+    // Called by an operation's terminal path, with the generation it was started under, so a
+    // request that answers after its watchdog already gave up on it cannot advance the queue a
+    // second time and start two requests at once - the exact situation this queue prevents.
+    void operationFinished(qint64 generation);
 
     Sailfish::Secrets::SecretManager m_secretManager;
     QString m_collectionName;
     bool m_collectionEnsured = false;
+
+    QVector<std::function<void()>> m_queue;
+    bool m_operationInFlight = false;
+    qint64 m_operationGeneration = 0;
 };
 
 #endif // DENCLA_COMMON_SECRETSSTORE_H
