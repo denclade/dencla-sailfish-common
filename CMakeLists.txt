@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 cmake_minimum_required(VERSION 3.19)
 project(dencla-sailfish-common CXX)
 
@@ -27,10 +30,10 @@ endif()
 
 option(DENCLA_COMMON_BUILD_TESTS "Build dencla-sailfish-common's own unit tests" ON)
 if(DENCLA_COMMON_IS_TOP_LEVEL AND DENCLA_COMMON_BUILD_TESTS)
+    enable_testing()
+    add_test(NAME test_legal COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_legal.cmake")
     find_package(Qt5Test QUIET)
-    if(Qt5Test_FOUND)
-        enable_testing()
-    else()
+    if(NOT Qt5Test_FOUND)
         message(STATUS "Qt5Test not found - skipping dencla-sailfish-common's own unit tests")
     endif()
 endif()

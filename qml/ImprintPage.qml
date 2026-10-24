@@ -1,19 +1,44 @@
+// SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
-// Shared Impressum (German §5 TMG) page - identical content across every app under this
-// author (same legal person/address), previously copy-pasted verbatim into
-// harbour-sailreader/harbour-wetterstein/harbour-audiobookfish independently. Fill in the
-// placeholders below ONCE here and every app picks up the fix at its next update, instead of
-// needing the same edit made three times.
-//
-// Legally-binding content bound to a specific person/jurisdiction - stays German-only
-// regardless of system language (see the sailfish/CLAUDE.md "Sprache" section), so none of
-// this page's text goes through qsTr() - qsTr()-wrapping it would make it a candidate for
-// translation via each app's own .ts files, exactly what must not happen here.
+// Installed in qml/pages/. Legal documents are plain local package files;
+// publisher details are supplied at build time, never embedded here.
 Page {
-    id: imprintPage
-    allowedOrientations: Orientation.Portrait
+    id: page
+    allowedOrientations: Orientation.All
+
+    property string documentName: "impressum"
+    readonly property string documentTitle: documentName === "datenschutz" ? "Datenschutz" : "Impressum"
+    property string documentText: ""
+    property bool loading: true
+    property bool loadFailed: false
+
+    function loadDocument() {
+        if (documentName !== "impressum" && documentName !== "datenschutz") {
+            loading = false
+            loadFailed = true
+            return
+        }
+        loading = true
+        loadFailed = false
+        var request = new XMLHttpRequest()
+        request.onreadystatechange = function () {
+            if (request.readyState !== XMLHttpRequest.DONE) return
+            page.loading = false
+            if ((request.status === 200 || request.status === 0) && request.responseText.trim().length > 0) {
+                page.documentText = request.responseText
+            } else {
+                page.loadFailed = true
+            }
+        }
+        request.open("GET", Qt.resolvedUrl("../../legal/" + documentName + ".html"), true)
+        request.send()
+    }
+
+    Component.onCompleted: loadDocument()
 
     SilicaFlickable {
         anchors.fill: parent
@@ -24,51 +49,42 @@ Page {
             width: parent.width
             spacing: Theme.paddingMedium
 
-            PageHeader {
-                title: "Impressum"
+            PageHeader { title: page.documentTitle }
+            BusyIndicator {
+                anchors.horizontalCenter: parent.horizontalCenter
+                running: page.loading
+                visible: running
+                size: BusyIndicatorSize.Medium
             }
-
-            SectionHeader { text: "Angaben gemäß § 5 TMG" }
             Label {
                 x: Theme.horizontalPageMargin
-                width: parent.width - 2 * Theme.horizontalPageMargin
+                width: parent.width - 2 * x
+                visible: !page.loading && !page.loadFailed
                 wrapMode: Text.WordWrap
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.primaryColor
+                linkColor: Theme.highlightColor
                 textFormat: Text.StyledText
-                text: "[Anbieter]<br>" +
-                      "[Name]<br>" +
-                      "[Straße Hausnummer]<br>" +
-                      "[PLZ Ort]"
+                text: page.documentText
+                onLinkActivated: {
+                    if (/^(https?:|mailto:|tel:)/i.test(link)) Qt.openUrlExternally(link)
+                }
             }
-
-            SectionHeader { text: "Kontakt" }
             Label {
                 x: Theme.horizontalPageMargin
-                width: parent.width - 2 * Theme.horizontalPageMargin
+                width: parent.width - 2 * x
+                visible: page.loadFailed
                 wrapMode: Text.WordWrap
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.primaryColor
-                textFormat: Text.StyledText
-                text: "E-Mail: contact@example.invalid<br>" +
-                      "Telefon: [Telefon]"
+                text: "Der Rechtstext konnte nicht geladen werden."
             }
-
-            SectionHeader { text: "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV" }
-            Label {
-                x: Theme.horizontalPageMargin
-                width: parent.width - 2 * Theme.horizontalPageMargin
-                wrapMode: Text.WordWrap
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.primaryColor
-                textFormat: Text.StyledText
-                text: "[Anbieter]<br>" +
-                      "[Name]<br>" +
-                      "[Straße Hausnummer]<br>" +
-                      "[PLZ Ort]"
+            Button {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: page.loadFailed
+                text: "Erneut versuchen"
+                onClicked: page.loadDocument()
             }
-
             Item { width: 1; height: Theme.paddingLarge }
         }
+        VerticalScrollDecorator { }
     }
 }

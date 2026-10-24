@@ -1,0 +1,23 @@
+<!-- SPDX-FileCopyrightText: 2026 Dennis Burgermeister -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- DENCLA-LEGAL-PRIVACY-DRAFT -->
+
+@LEGAL_PREVIEW_NOTICE@
+<p>Diese Vorlage muss für @LEGAL_APPLICATION_NAME@ anhand der tatsächlichen
+Datenverarbeitung ausgearbeitet werden. Den Entwurfsmarker erst nach der
+inhaltlichen Anpassung entfernen.</p>
+<h2>Verantwortlicher und Kontakt</h2>
+@LEGAL_CONTACT_HTML@
+<h2>Lokale Verarbeitung</h2>
+<p>Beschreiben: Datenarten, Zwecke, Ablageorte, Berechtigungen,
+Zwischenablage, Backups, Historie und Wiederherstellungsstände.</p>
+<h2>Netzwerk und Empfänger</h2>
+<p>Beschreiben: Dienste, automatische Abrufe, externe Inhalte, Anmeldung,
+übertragene Inhalte und Metadaten, Verschlüsselung und externe Betreiber.</p>
+<h2>Protokolle und Speicherdauer</h2>
+<p>Beschreiben: tatsächliche Diagnose-/Absturzdaten, Übermittlung,
+Aufbewahrung, Löschmöglichkeiten und Grenzen der Löschung.</p>
+<h2>Kontaktaufnahme und Rechte</h2>
+<p>Beschreiben: Verarbeitungen durch den Anbieter, deren Rechtsgrundlagen,
+berechtigte Interessen, Aufbewahrung und anwendbare Betroffenenrechte.
+Keine Rechtsgrundlagen oder Löschfristen aus anderen Apps ungeprüft übernehmen.</p>

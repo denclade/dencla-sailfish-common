@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 find_package(Qt5 COMPONENTS Network REQUIRED)
 
 # PocketBase's REST API (see pocketbaseclient.h). Tested against a real

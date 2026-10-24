@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # End-to-end encryption primitives (see vaultcrypto.h). The two C libraries
 # are vendored as upstream released them (vendor/*/, with their licences):
 # Monocypher 4.0.2 and the BLAKE3 1.5.4 reference implementation, the

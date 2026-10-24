@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+// SPDX-FileCopyrightText: 2013 Jolla Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later AND BSD-3-Clause
+
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
@@ -8,8 +12,7 @@ import Sailfish.Silica 1.0
 // viewport - Silica's own native drag-past-bounds/dim already works there and keeps doing so
 // completely unchanged (this component doesn't touch boundsBehavior or contentY at all).
 //
-// Why this exists instead of a boundsBehavior/PushUpMenu tweak (all tried first, all rejected -
-// see harbour-sailreader's git history for the full live-debugged derivation):
+// Why this exists instead of a boundsBehavior/PushUpMenu tweak:
 //
 // - SilicaListView's own boundsBehavior binding only allows real drag-past-bounds (and the
 //   elastic dim that comes with it, baked into every SilicaListView via its private

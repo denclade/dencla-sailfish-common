@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include <QtTest>
 #include <QStandardPaths>
 #include "../util/fileutils.h"

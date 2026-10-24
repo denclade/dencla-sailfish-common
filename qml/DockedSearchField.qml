@@ -1,14 +1,14 @@
+// SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
 // A DockedItem (see its own header comment for the general docking/positioning mechanism)
 // specialized for the one thing every app's own list search needs: a debounced query signal,
 // clear-on-hide/focus-on-show, and Silica SearchField's own active/canHide fade transition -
-// generalized from harbour-audiobookfish's original LibrarySearchField.qml, which first proved
-// out the page-level-sibling placement this depends on (see CLAUDE.md's "Suchfeld + Sticky
-// Header in einer Liste" for the full derivation - losing keyboard focus whenever the tracked
-// model's row set changes, confirmed for ANY placement nested inside the list at all, not just
-// header:).
+// kept as a page-level sibling because nesting an interactive field inside the list
+// can lose keyboard focus when the tracked model's row set changes. See DockedItem.qml.
 //
 // active is deliberately never written internally (e.g. when the field's own canHide "X" is
 // tapped) - only ever read from the caller-owned property of the same name, exactly like

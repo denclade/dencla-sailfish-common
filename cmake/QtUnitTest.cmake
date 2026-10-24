@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # add_qt_unit_test(<name> SOURCES <files...> LIBS <targets...> [INCLUDE_DIRS <dirs...>])
 #
 # Registers a desktop-buildable Qt5Test executable - the same pattern

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """One release of a harbour-* app: version up, changelog, commit, tag.
 
-    just release <patch|minor|major|X.Y.Z> [--dry-run] [--skip-checks] [--push]
+    mise run release <patch|minor|major|X.Y.Z> [--dry-run] [--skip-checks] [--push]
 
-Shared by every app in this family (see docs/versioning.md), so the flow
-is the same everywhere and only the per-app parts are options, written
-once into that app's justfile `release` recipe:
+The per-app options belong in the application's release task. Select
+--runner mise for mise tasks; existing just recipes remain supported:
 
   1. check: on the release branch, clean tree, not behind origin, every
      --require-release submodule at a tagged release, the tag still free
-  2. test: the --test just recipes
+  2. run required --preflight tasks, then optional --test tasks
   3. set the version -- the .spec's Version (the one source the build
      reads, see the app's CMakeLists.txt) and any --mirror-version file,
      then the --sync command that regenerates derived files
@@ -244,7 +246,7 @@ def find_app(root):
     specs = sorted(f for f in os.listdir(rpm_dir) if f.endswith(".spec")) if os.path.isdir(rpm_dir) else []
     if len(specs) != 1:
         die(f"Expected exactly one rpm/*.spec in {root}, found {len(specs)}.\n"
-            "  Run this from the app's own directory (just release).")
+            "  Run this from the app's own directory.")
     return specs[0][:-len(".spec")]
 
 
@@ -252,7 +254,7 @@ def options(argv):
     parser = argparse.ArgumentParser(
         prog="release.py", add_help=True,
         description="Cuts a release of a harbour-* app. The options below belong in the "
-                    "app's justfile; on the command line only the version and the flags.")
+                    "app's release task; on the command line only the version and the flags.")
     parser.add_argument("version", metavar="patch|minor|major|X.Y.Z",
                         help="which version comes next")
     parser.add_argument("--dry-run", action="store_true",
@@ -261,8 +263,12 @@ def options(argv):
                         help="skip the tests - only when they just ran")
     parser.add_argument("--push", action="store_true",
                         help="push the branch and the tag when everything worked")
-    parser.add_argument("--test", metavar="RECIPE", action="append", default=[],
-                        help="a just recipe to run before releasing (repeatable; default: test)")
+    parser.add_argument("--test", metavar="TASK", action="append", default=[],
+                        help="a task to run before releasing (repeatable; default: test)")
+    parser.add_argument("--runner", choices=("just", "mise"), default="just",
+                        help="task runner (default: just for existing apps; use mise for mise.toml)")
+    parser.add_argument("--preflight", metavar="TASK", action="append", default=[],
+                        help="required task that also runs with --skip-checks, e.g. legal:check (repeatable)")
     parser.add_argument("--lang", choices=sorted(HEADINGS), default="en",
                         help="the language the changelog is written in (default: en)")
     parser.add_argument("--heading", metavar="PREFIX=TEXT", action="append", default=[],
@@ -369,12 +375,19 @@ def main(argv):
         print("--dry-run: nothing written, nothing tested.")
         return
 
+    # Required publication checks are independent of optional test suites.
+    runner = ["mise", "run"] if args.runner == "mise" else ["just"]
+    for task in args.preflight:
+        print(f"\n→ {' '.join(runner)} {task}")
+        if subprocess.run([*runner, task], cwd=root).returncode != 0:
+            die(f"Required preflight {task} failed -- no release.")
+
     # 2. tests
     if not args.skip_checks:
         for task in args.test:
-            print(f"\n→ just {task}")
-            if subprocess.run(["just", task], cwd=root).returncode != 0:
-                die(f"just {task} failed -- no release.")
+            print(f"\n→ {' '.join(runner)} {task}")
+            if subprocess.run([*runner, task], cwd=root).returncode != 0:
+                die(f"{' '.join(runner)} {task} failed -- no release.")
 
     # 3. + 4. version and changelogs. Kept as they were until --sync is
     # through: a release that stops halfway must not leave the version set
@@ -411,7 +424,7 @@ def main(argv):
         print("\nTo publish (a pushed tag stays as it is):")
         for command in commands:
             print("  git " + " ".join(command))
-        print("\nThe RPM for the store: just dev-build (or aarch64/armv7hl).")
+        print("\nBuild the RPM with the application's SDK build task.")
 
 
 if __name__ == "__main__":

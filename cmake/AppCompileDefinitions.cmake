@@ -1,10 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # dencla_common_app_compile_definitions(<target> VERSION <version-string>)
 #
 # Applies this author's standard compile-definition set to a Sailfish app target: APP_VERSION
 # from the given version string, QT_QML_DEBUG for Debug/RelWithDebInfo (so QML debugging/
 # profiling attaches), and QT_NO_DEBUG_OUTPUT for every config except Debug - qDebug() calls
-# would otherwise spam journald on every release install (see harbour-sailreader's
-# sailfish/CLAUDE.md entry for the incident this was added for). Each app is still free to add
+# would otherwise fill journald on release installs. Each app is still free to add
 # its own extra app-specific compile definitions (e.g. a debug-tools-only feature flag)
 # alongside this via its own separate target_compile_definitions() call - CMake accumulates
 # multiple calls on the same target.

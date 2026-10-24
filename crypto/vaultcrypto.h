@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #ifndef DENCLA_COMMON_VAULTCRYPTO_H
 #define DENCLA_COMMON_VAULTCRYPTO_H
 

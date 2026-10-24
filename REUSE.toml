@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version = 1
+
+# Select the upstream CC0 option without modifying vendored source files.
+[[annotations]]
+path = ["crypto/vendor/blake3/*"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "BLAKE3 contributors"
+SPDX-License-Identifier = "CC0-1.0"

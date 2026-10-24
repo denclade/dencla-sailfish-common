@@ -1,0 +1,9 @@
+{
+  "name": "[Name]",
+  "street": "[Street and house number]",
+  "postal_code": "[Postal code]",
+  "city": "[City]",
+  "country": "[Country]",
+  "email": "contact@example.invalid",
+  "phone": ""
+}

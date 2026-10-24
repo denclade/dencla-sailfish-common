@@ -1,0 +1,9 @@
+<!-- SPDX-FileCopyrightText: 2026 Dennis Burgermeister -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+@LEGAL_PREVIEW_NOTICE@
+<h2>Anbieter und Kontakt</h2>
+@LEGAL_CONTACT_HTML@
+<p>Diese Angaben gelten für die Anwendung @LEGAL_APPLICATION_NAME@. Hinweise zur
+Verarbeitung personenbezogener Daten finden Sie unter „Datenschutz“ in der
+Über-Seite der Anwendung.</p>

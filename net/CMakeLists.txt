@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Dennis Burgermeister
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 find_package(Qt5 COMPONENTS Network REQUIRED)
 
 add_library(dencla_common_net STATIC
