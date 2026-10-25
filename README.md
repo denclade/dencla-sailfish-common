@@ -26,7 +26,7 @@ development files. Applications can use `add_subdirectory()` and link the
 in the consuming application.
 
 The included tests cover disk caching, file utilities, HTTP, encryption and
-legal document generation/installation. Qt tests require Qt 5 Test; the legal
+legal document and license generation/installation. Qt tests require Qt 5 Test; the legal
 tests can also run standalone without Qt.
 
 ## Legal documents
@@ -34,6 +34,13 @@ tests can also run standalone without Qt.
 Reusable imprint/privacy integration, neutral templates and standalone tests:
 [guide for agents and maintainers](docs/legal.md). This CMake helper can also
 be used independently of the Qt library build.
+
+## License packaging
+
+`cmake/DenclaLicenses.cmake` provides `dencla_install_licenses()` for all apps.
+It generates component notices, preserves upstream license texts and installs
+them with the package. See [license packaging](docs/licenses.md) for usage,
+component selection and standalone tests. This helper also works without Qt.
 
 ## Release helper
 

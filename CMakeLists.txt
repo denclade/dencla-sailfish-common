@@ -32,6 +32,7 @@ option(DENCLA_COMMON_BUILD_TESTS "Build dencla-sailfish-common's own unit tests"
 if(DENCLA_COMMON_IS_TOP_LEVEL AND DENCLA_COMMON_BUILD_TESTS)
     enable_testing()
     add_test(NAME test_legal COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_legal.cmake")
+    add_test(NAME test_licenses COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_licenses.cmake")
     find_package(Qt5Test QUIET)
     if(NOT Qt5Test_FOUND)
         message(STATUS "Qt5Test not found - skipping dencla-sailfish-common's own unit tests")
