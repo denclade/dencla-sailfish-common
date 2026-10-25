@@ -83,6 +83,16 @@ function(dencla_install_licenses)
     _dencla_license_setting("${install_script}" GENERATOR "${generator}")
     file(APPEND "${install_script}" "include(\"\${DENCLA_LICENSE_GENERATOR}\")\n")
     install(SCRIPT "${install_script}" COMPONENT Licenses)
+    # Rapid regeneration may retain the installed file's timestamp. Force
+    # copying these notices so an incremental install cannot retain old text.
+    install(CODE [=[
+        set(_dencla_install_always "$ENV{CMAKE_INSTALL_ALWAYS}")
+        set(ENV{CMAKE_INSTALL_ALWAYS} 1)
+    ]=] COMPONENT Licenses)
     install(DIRECTORY "${LIC_OUTPUT_DIR}/" DESTINATION "share/${LIC_APP_ID}/licenses"
         COMPONENT Licenses FILES_MATCHING PATTERN "*.txt")
+    install(CODE [=[
+        set(ENV{CMAKE_INSTALL_ALWAYS} "${_dencla_install_always}")
+        unset(_dencla_install_always)
+    ]=] COMPONENT Licenses)
 endfunction()
