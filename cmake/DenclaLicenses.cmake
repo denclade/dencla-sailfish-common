@@ -15,7 +15,7 @@ function(_dencla_license_setting file name value)
 endfunction()
 
 function(dencla_install_licenses)
-    cmake_parse_arguments(LIC "" "TARGET;APP_ID;APP_NAME;PROJECT_LICENSE;SOURCE_URL;MINIZ_SOURCE;NOTICES_FILE"
+    cmake_parse_arguments(LIC "" "TARGET;APP_ID;APP_NAME;PROJECT_LICENSE;LICENSE_ID;COPYRIGHT;SOURCE_URL;MINIZ_SOURCE;NOTICES_FILE"
         "COMPONENTS;EXTRA_LICENSE_FILES" ${ARGN})
     if(LIC_UNPARSED_ARGUMENTS OR LIC_KEYWORDS_MISSING_VALUES)
         message(FATAL_ERROR "Invalid dencla_install_licenses arguments.")
@@ -62,7 +62,7 @@ function(dencla_install_licenses)
     set(LIC_OUTPUT_DIR "${directory}/output")
     set(manifest "${directory}/manifest.cmake")
     file(WRITE "${manifest}" "# Generated license configuration; do not edit.\n")
-    foreach(field APP_NAME PROJECT_LICENSE SOURCE_URL COMPONENTS MINIZ_SOURCE NOTICES_FILE EXTRA_LICENSE_FILES COMMON_DIR OUTPUT_DIR)
+    foreach(field APP_NAME PROJECT_LICENSE LICENSE_ID COPYRIGHT SOURCE_URL COMPONENTS MINIZ_SOURCE NOTICES_FILE EXTRA_LICENSE_FILES COMMON_DIR OUTPUT_DIR)
         _dencla_license_setting("${manifest}" "${field}" "${LIC_${field}}")
     endforeach()
     set(generator "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/GenerateLicenses.cmake")
@@ -90,7 +90,7 @@ function(dencla_install_licenses)
         set(ENV{CMAKE_INSTALL_ALWAYS} 1)
     ]=] COMPONENT Licenses)
     install(DIRECTORY "${LIC_OUTPUT_DIR}/" DESTINATION "share/${LIC_APP_ID}/licenses"
-        COMPONENT Licenses FILES_MATCHING PATTERN "*.txt")
+        COMPONENT Licenses FILES_MATCHING PATTERN "*.txt" PATTERN "index.json")
     install(CODE [=[
         set(ENV{CMAKE_INSTALL_ALWAYS} "${_dencla_install_always}")
         unset(_dencla_install_always)

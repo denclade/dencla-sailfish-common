@@ -86,6 +86,9 @@ function(dencla_install_legal)
     install(CODE "${code}" COMPONENT Legal)
     install(FILES "${output}/impressum.html" "${output}/datenschutz.html"
         DESTINATION "share/${LEGAL_APP_ID}/legal" COMPONENT Legal)
-    install(FILES "${common}/qml/ImprintPage.qml"
+    install(FILES "${common}/qml/ImprintPage.qml" "${common}/qml/LegalDocumentPage.qml"
+        "${common}/qml/LicenseCatalog.qml" "${common}/qml/LegalFiles.js"
         DESTINATION "share/${LEGAL_APP_ID}/qml/pages" COMPONENT Legal)
+    install(FILES "${common}/qml/LicenseText.qml"
+        DESTINATION "share/${LEGAL_APP_ID}/qml/components" COMPONENT Legal)
 endfunction()

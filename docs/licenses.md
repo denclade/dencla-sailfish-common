@@ -3,6 +3,10 @@
 
 # License packaging for consuming applications
 
+For the shared presentation in the application's About page, see the
+[About and legal UI guide](about-and-legal.md). `DenclaAbout.cmake` combines the
+license generator, legal-document generator and QML UI in one integration.
+
 Include this helper after creating the application target. It does not require
 the Qt library build or the legal-document helper.
 
@@ -40,6 +44,8 @@ a different upstream license layout must be reviewed and the extractor adapted.
 | `APP_ID` | Package directory; defaults to the target name |
 | `APP_NAME` | Display name in the generated summary; defaults to `APP_ID` |
 | `PROJECT_LICENSE` | Application license file; defaults to the calling directory's `LICENSE` |
+| `LICENSE_ID` | SPDX identifier displayed in the About notice; no license is inferred from the filename |
+| `COPYRIGHT` | Application copyright notice for the About page |
 | `SOURCE_URL` | Optional application source URL in the summary |
 | `COMPONENTS` | Optional list from the component table above |
 | `MINIZ_SOURCE` | Required source file when selecting `MINIZ` |
@@ -59,6 +65,14 @@ Each app has a separate output directory under
 `CMakeFiles/dencla-licenses-<target>/output/`. Generated files are not source
 artifacts and need not be committed. Changing the component selection removes
 obsolete notices from that generated directory.
+
+The generated `index.json` contains schema version 1, an `application` object
+(`name`, `license`, `copyright`, `url`) and a `components` array. Each component
+has `name`, `license`, `url` and a `files` array of local `.txt` basenames.
+Application license and the full upstream texts remain unchanged. The QML UI
+uses this index directly; it does not parse `THIRD_PARTY_NOTICES.txt`.
+If the application license is byte-for-byte identical to the shared GPL,
+`APP-LICENSE.txt` is a relative symlink to that text to avoid packaging it twice.
 
 Files are installed under `share/<app-id>/licenses/` using the `Licenses`
 installation component. The generated `THIRD_PARTY_NOTICES.txt` identifies

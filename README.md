@@ -42,6 +42,11 @@ It generates component notices, preserves upstream license texts and installs
 them with the package. See [license packaging](docs/licenses.md) for usage,
 component selection and standalone tests. This helper also works without Qt.
 
+The [About and legal UI guide](docs/about-and-legal.md) describes the shared
+presentation of licenses, third-party notices, imprint and privacy.
+`cmake/DenclaAbout.cmake` provides the combined `dencla_install_about()` helper,
+including the QML pages and generated offline license catalog.
+
 ## Release helper
 
 The shared `scripts/release.py` supports existing just apps and mise apps
