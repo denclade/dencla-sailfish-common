@@ -53,6 +53,13 @@ The shared `scripts/release.py` supports existing just apps and mise apps
 (`--runner mise`). Use `--preflight legal:check` for the required legal check;
 preflights also run with `--skip-checks`.
 
+## App screenshots and tours
+
+The [app media guide](docs/app-media-guide.md) defines shared demo-data,
+screenshot and README conventions. `scripts/capture-screenshot.py` captures
+the emulator using an app's SSH wrapper; `scripts/render-promo.py` generates
+thumbnails and GIF/MP4 tours from an app-specific JSON manifest.
+
 ## License
 
 Copyright 2026 Dennis Burgermeister. Original code: GPL-3.0-or-later;
