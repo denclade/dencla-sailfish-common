@@ -30,7 +30,7 @@ with open(os.environ["MEDIA_TEST_LOG"], "a") as log:
 if sys.argv[1] == "ssh":
     command = sys.argv[2]
     if command.startswith("mktemp"):
-        print("/home/testuser/.app-screenshot.TEST")
+        print("/home/testuser/app-screenshot.TEST")
     elif "dbus-send" in command and os.environ.get("MEDIA_TEST_FAIL") == "capture":
         sys.exit(1)
 elif sys.argv[1] == "scp":
@@ -46,7 +46,7 @@ elif sys.argv[1] == "scp":
                 capture_output=True, text=True,
             )
             calls = [json.loads(line) for line in log.read_text().splitlines()]
-            self.assertEqual(calls[-1], ["ssh", "rm -rf -- /home/testuser/.app-screenshot.TEST"])
+            self.assertEqual(calls[-1], ["ssh", "rm -rf -- /home/testuser/app-screenshot.TEST"])
             self.assertIn("$(id -u)", calls[1][1])
             return result, calls, output.read_bytes() if output.exists() else None
 
@@ -54,7 +54,7 @@ elif sys.argv[1] == "scp":
         result, calls, image = self.capture()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(image, b"test screenshot")
-        self.assertEqual(calls[2][0:2], ["scp", ":/home/testuser/.app-screenshot.TEST/screenshot.png"])
+        self.assertEqual(calls[2][0:2], ["scp", ":/home/testuser/app-screenshot.TEST/screenshot.png"])
 
     def test_capture_failure_cleans_up_without_copying(self):
         result, calls, image = self.capture("capture")

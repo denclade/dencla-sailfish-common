@@ -26,9 +26,10 @@ def main():
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     time.sleep(args.settle_seconds)
-    # Lipstick accepts only paths under the user's home and refuses overwrite.
-    directory = remote('mktemp -d "$HOME/.app-screenshot.XXXXXX"')
-    if not directory.startswith("/") or not Path(directory).name.startswith(".app-screenshot."):
+    # Lipstick accepts only paths under the user's home, refuses overwrite and rejects any
+    # hidden path component, so the temporary directory must not start with a dot.
+    directory = remote('mktemp -d "$HOME/app-screenshot.XXXXXX"')
+    if not directory.startswith("/") or not Path(directory).name.startswith("app-screenshot."):
         raise RuntimeError(f"Unexpected remote temporary directory: {directory!r}")
     image = directory + "/screenshot.png"
     try:
