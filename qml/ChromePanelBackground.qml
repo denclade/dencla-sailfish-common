@@ -4,25 +4,13 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
-// Two-layer "docked chrome panel" background - an opaque dark scrim first, so list content
-// scrolling underneath a pinned/docked copy of this never shows through and hurts legibility,
-// then a subtle highlight-colored wash on top so the panel still reads as this app's accent
-// rather than a generic dark bar (a saturated accent-colored fill on its own was tried and
-// rejected: near-zero contrast against same-colored text/icons drawn on top of it). Originally
-// harbour-sailreader-only (its sticky section header/multi-select footer), then duplicated
-// verbatim into harbour-audiobookfish for the same reasoning before landing here.
+// Normal Theme text/icons need a backdrop in the same light/dark scheme.
+// An opaque base hides scrolling content; a faint accent wash ties the
+// panel to the ambience without reducing contrast against accent text.
 // Caller sets anchors.fill (or width/height) on the instance, same as any other Item.
-Item {
+Rectangle {
     id: root
 
-    Rectangle {
-        anchors.fill: root
-        color: "black"
-        opacity: 0.6
-    }
-    Rectangle {
-        anchors.fill: root
-        color: Theme.highlightColor
-        opacity: 0.18
-    }
+    color: Qt.tint(Theme.colorScheme === Theme.LightOnDark ? "#202020" : "#f0f0f0",
+                   Qt.rgba(Theme.highlightColor.r, Theme.highlightColor.g, Theme.highlightColor.b, 0.08))
 }
