@@ -47,11 +47,22 @@ presentation of licenses, third-party notices, imprint and privacy.
 `cmake/DenclaAbout.cmake` provides the combined `dencla_install_about()` helper,
 including the QML pages and generated offline license catalog.
 
-## Release helper
+## Tasks, builds and releases
 
-The shared `scripts/release.py` supports existing just apps and mise apps
-(`--runner mise`). Use `--preflight legal:check` for the required legal check;
-preflights also run with `--skip-checks`.
+All harbour apps share one mise task scheme (`dev:`, `phone:`, `cloud:`,
+`release:prepare`/`release:deploy`) and call the shared scripts here:
+[mise tasks](docs/mise-tasks.md) and [releasing](docs/releasing.md) (in German).
+
+| Script | Task |
+|---|---|
+| `scripts/sdk-rpm.sh` | `dev:build`, `phone:build`, `check:harbour` |
+| `scripts/release.py` | `release:prepare`: version, changelog, commit, tag `v<version>` |
+| `scripts/app_release.py` | `release:deploy`: RPMs for all architectures, Harbour check, source archive |
+| `scripts/cloud_release.py` | `cloud:build`, `cloud:release:prepare`/`deploy`: d0b bundle, tags `cloud-v<version>` |
+| `scripts/cloud-test-containers.sh` | `cloud:test:containers` |
+| `scripts/pb-get.sh` | `cloud:get`: PocketBase from `containers/build.env` |
+
+Tests: `python3 -m unittest discover -s tests -p 'test_*release.py'`.
 
 ## App screenshots and tours
 

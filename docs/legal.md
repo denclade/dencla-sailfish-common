@@ -116,11 +116,11 @@ mit `-DDENCLA_REQUIRE_LEGAL_DETAILS=ON` konfigurieren: Dann schlagen Konfigurati
 Build und Installation bei unvollständigen Angaben oder einem Datenschutzentwurf fehl.
 
 Der gemeinsame Release-Helfer kann dies explizit als verpflichtenden Preflight
-ausführen. Für eine mise-App beispielsweise:
+ausführen (Task `check:legal`, siehe [releasing.md](releasing.md)). Für eine mise-App beispielsweise:
 
 ```sh
 python3 3rdparty/dencla-sailfish-common/scripts/release.py patch \
-    --runner mise --branch main --preflight legal:check --test test
+    --runner mise --branch main --preflight check:legal --test test
 ```
 
 `--preflight` bleibt auch mit `--skip-checks` aktiv. Bestehende just-Apps

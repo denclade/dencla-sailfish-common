@@ -4,9 +4,11 @@
 
 """One release of a harbour-* app: version up, changelog, commit, tag.
 
-    mise run release <patch|minor|major|X.Y.Z> [--dry-run] [--skip-checks] [--push]
+    mise run release:prepare <patch|minor|major|X.Y.Z> [--dry-run] [--skip-checks] [--push]
 
-The per-app options belong in the application's release task. Select
+The per-app options belong in the application's release:prepare task;
+the delivery is built afterwards by app_release.py (release:deploy, see
+docs/releasing.md). Select
 --runner mise for mise tasks; existing just recipes remain supported:
 
   1. check: on the release branch, clean tree, not behind origin, every
@@ -268,7 +270,7 @@ def options(argv):
     parser.add_argument("--runner", choices=("just", "mise"), default="just",
                         help="task runner (default: just for existing apps; use mise for mise.toml)")
     parser.add_argument("--preflight", metavar="TASK", action="append", default=[],
-                        help="required task that also runs with --skip-checks, e.g. legal:check (repeatable)")
+                        help="required task that also runs with --skip-checks, e.g. check:legal (repeatable)")
     parser.add_argument("--lang", choices=sorted(HEADINGS), default="en",
                         help="the language the changelog is written in (default: en)")
     parser.add_argument("--heading", metavar="PREFIX=TEXT", action="append", default=[],
