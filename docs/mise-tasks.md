@@ -49,15 +49,14 @@ Pflicht in jeder App; Name und Bedeutung genau so:
 | `check` | alles, was ohne Emulator scheitern kann |
 | `check:harbour` | Jollas Harbour-Prüfung auf das RPM von `dev:build` |
 | `check:legal` | Herausgeberangaben und Datenschutz streng prüfen ([legal.md](legal.md)) |
+| `check:rpm <rpm>` | Rechtstexte und Lizenzbeilage im fertigen RPM prüfen (`--rpm-check` von `release:deploy`) |
 | `dev:build`, `dev:deploy`, `dev:run`, `dev:screenshot`, `dev:logs`, `dev:ssh` | Emulator-Zyklus |
 | `release:prepare` | App-Version setzen, Commit, Tag `v<version>` |
 | `release:deploy` | App-Lieferung aus dem Tag bauen |
 
 Nach Bedarf, dann mit diesen Namen: `dev:stop`, `dev:touch`, `dev:demo`,
 `dev:reset`, `dev:seed`, `dev:qmlcheck`, `phone:build`, `phone:deploy`,
-`phone:logs`, `check:licenses`, `check:contrast`, `check:rpm <rpm>`
-(Paketinhalt eines gegebenen RPMs, für `--rpm-check` von `release:deploy`),
-`audit:secrets`.
+`phone:logs`, `check:licenses`, `check:contrast`, `audit:secrets`.
 App-eigene Werkzeuge bekommen einen eigenen Präfix (`rust:test`,
 `rust:build`).
 
@@ -117,6 +116,7 @@ Apps kopieren: dann gehört sie hierher.
 | `scripts/cloud_release.py` | `cloud:build`, `cloud:release:prepare`, `cloud:release:deploy` |
 | `scripts/cloud-test-containers.sh` | `cloud:test:containers` |
 | `scripts/pb-get.sh` | `cloud:get` |
+| `scripts/rpm-payload-check.py` | `check:rpm` |
 | `scripts/capture-screenshot.py` | `dev:screenshot` |
 
 `sdk-rpm.sh` läuft aus der Wurzel der App: auf dem Host über

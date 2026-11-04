@@ -75,20 +75,31 @@ nicht auf dem Tag steht. Dann:
 
 1. `--preflight`-Tasks (z. B. `check:legal`),
 2. für aarch64, armv7hl und i486 (`--arch` schränkt ein; das SDK-Release
-   kommt aus `SAILFISH_SDK_TARGET`) das RPM mit `scripts/sdk-rpm.sh`
-   bauen (mit den Makros aus `SDK_RPM_DEFINES`), Tests im `%check`
-   inklusive, und Jollas Harbour-Prüfung darauf, danach je RPM die
-   `--rpm-check`-Tasks mit dem Pfad als Argument (z. B. `check:rpm` für
-   eine app-eigene Prüfung des Paketinhalts),
-3. prüfen, dass der Build den Arbeitsbaum nicht verändert hat,
+   kommt aus `SAILFISH_SDK_TARGET`) erst die `--prebuild`-Tasks mit dem
+   Target als Argument (was der RPM-Build braucht, aber nicht selbst
+   bauen kann, z. B. eine vorab gebaute Bibliothek für genau diese
+   Architektur), dann das RPM mit `scripts/sdk-rpm.sh` bauen (mit den
+   Makros aus `SDK_RPM_DEFINES`), Tests im `%check` inklusive, und Jollas
+   Harbour-Prüfung darauf, danach je RPM die `--rpm-check`-Tasks mit dem
+   Pfad als Argument (`check:rpm`),
+3. prüfen, dass Build und `--prebuild` den Arbeitsbaum nicht verändert
+   haben,
 4. `dist/<app>-<tag>/` neu anlegen: die RPMs, das Quellarchiv
    `<app>-X.Y.Z-source.tar.bz2` mit allen Submodulen an den referenzierten
    Commits (ein GitHub-Archiv enthält sie nicht) und `SHA256SUMS`.
 
-Den Ordner als Release-Artefakt anbieten, den RPM-Inhalt vorher auf
-Rechtstexte und Lizenzbeilage prüfen (automatisch, wenn die App das als
-`--rpm-check` angibt). App-Tag und Submodul-Commits müssen
-in den öffentlichen Repositories liegen.
+**`check:rpm <rpm>`** (`scripts/rpm-payload-check.py`) liest das RPM
+selbst (nur Python-Standardbibliothek, kein `rpm2cpio`) und scheitert,
+wenn `share/<app>/legal/impressum.html` oder `datenschutz.html` fehlt,
+leer ist oder noch eine Entwicklungsfassung ist (Vorschauvermerk aus
+`cmake/GenerateLegal.cmake`, Entwurfsmarker, unersetzter
+`@LEGAL_…@`-Platzhalter), oder wenn `share/<app>/licenses/index.json`
+fehlt oder eine Lizenzdatei nennt, die das Paket nicht oder leer
+enthält. So prüft `release:deploy` den Inhalt, der wirklich ausgeliefert
+wird, nicht nur die lokale Konfiguration (`check:legal`).
+
+Den Ordner als Release-Artefakt anbieten. App-Tag und Submodul-Commits
+müssen in den öffentlichen Repositories liegen.
 
 **Version in der App.** CMake liest die `.spec` (das RPM übergibt
 `-DAPP_VERSION=%{version}`, jeder andere Build hängt `-dev` an), `main()`
@@ -218,7 +229,13 @@ run = 'python3 "$DENCLA_COMMON/scripts/release.py" --runner mise --branch main -
 
 [tasks."release:deploy"]
 usage = 'arg "<tag>" help="v<.spec Version>, e.g. v1.1.0"'
-run = 'python3 "$DENCLA_COMMON/scripts/app_release.py" deploy "$usage_tag" --preflight check:legal'
+run = 'python3 "$DENCLA_COMMON/scripts/app_release.py" deploy "$usage_tag" --preflight check:legal --rpm-check check:rpm'
+# App, deren RPM etwas Vorgebautes je Architektur linkt: zusätzlich
+#   --prebuild <task>   (der Task bekommt das SDK-Target als Argument)
+
+[tasks."check:rpm"]
+usage = 'arg "<rpm>" help="Path of a built RPM, e.g. RPMS/<app>-1.1.0-1.aarch64.rpm"'
+run = 'python3 "$DENCLA_COMMON/scripts/rpm-payload-check.py" "$usage_rpm"'
 
 # nur mit Server
 [tasks."cloud:build"]
