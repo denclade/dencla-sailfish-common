@@ -55,7 +55,9 @@ Pflicht in jeder App; Name und Bedeutung genau so:
 
 Nach Bedarf, dann mit diesen Namen: `dev:stop`, `dev:touch`, `dev:demo`,
 `dev:reset`, `dev:seed`, `dev:qmlcheck`, `phone:build`, `phone:deploy`,
-`phone:logs`, `check:licenses`, `check:contrast`, `audit:secrets`.
+`phone:logs`, `check:licenses`, `check:contrast`, `check:rpm <rpm>`
+(Paketinhalt eines gegebenen RPMs, für `--rpm-check` von `release:deploy`),
+`audit:secrets`.
 App-eigene Werkzeuge bekommen einen eigenen Präfix (`rust:test`,
 `rust:build`).
 

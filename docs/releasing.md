@@ -77,14 +77,17 @@ nicht auf dem Tag steht. Dann:
 2. für aarch64, armv7hl und i486 (`--arch` schränkt ein; das SDK-Release
    kommt aus `SAILFISH_SDK_TARGET`) das RPM mit `scripts/sdk-rpm.sh`
    bauen (mit den Makros aus `SDK_RPM_DEFINES`), Tests im `%check`
-   inklusive, und Jollas Harbour-Prüfung darauf,
+   inklusive, und Jollas Harbour-Prüfung darauf, danach je RPM die
+   `--rpm-check`-Tasks mit dem Pfad als Argument (z. B. `check:rpm` für
+   eine app-eigene Prüfung des Paketinhalts),
 3. prüfen, dass der Build den Arbeitsbaum nicht verändert hat,
 4. `dist/<app>-<tag>/` neu anlegen: die RPMs, das Quellarchiv
    `<app>-X.Y.Z-source.tar.bz2` mit allen Submodulen an den referenzierten
    Commits (ein GitHub-Archiv enthält sie nicht) und `SHA256SUMS`.
 
 Den Ordner als Release-Artefakt anbieten, den RPM-Inhalt vorher auf
-Rechtstexte und Lizenzbeilage prüfen. App-Tag und Submodul-Commits müssen
+Rechtstexte und Lizenzbeilage prüfen (automatisch, wenn die App das als
+`--rpm-check` angibt). App-Tag und Submodul-Commits müssen
 in den öffentlichen Repositories liegen.
 
 **Version in der App.** CMake liest die `.spec` (das RPM übergibt

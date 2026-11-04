@@ -124,6 +124,25 @@ class Deploy(unittest.TestCase):
         self.assertIn("harbour-demo-1.1.0/rpm/harbour-demo.spec", names)
         self.assertIn("harbour-demo-1.1.0/3rdparty/common/lib.txt", names)
 
+    def test_rpm_checks_run_on_each_rpm(self):
+        sdk = FakeSdk()
+        ar.deploy_release(self.root, "v1.1.0", run=sdk, targets=TARGETS, rpm_checks=["check:rpm"])
+        for arch in ("aarch64", "i486"):
+            rpm = f"RPMS/harbour-demo-1.1.0-1.{arch}.rpm"
+            harbour = sdk.commands.index([os.path.join(SCRIPTS, "sdk-rpm.sh"), "check",
+                                          f"SailfishOS-5.1.0.11-{arch}", rpm])
+            self.assertEqual(sdk.commands[harbour + 1], ["mise", "run", "check:rpm", rpm])
+
+    def test_failing_rpm_check_writes_no_dist(self):
+        def sdk(command, root):
+            FakeSdk.__call__(fake, command, root)
+            if command[:3] == ["mise", "run", "check:rpm"]:
+                raise ar.ReleaseError("check:rpm failed")
+        fake = FakeSdk()
+        with self.assertRaisesRegex(ar.ReleaseError, "check:rpm failed"):
+            ar.deploy_release(self.root, "v1.1.0", run=sdk, targets=TARGETS, rpm_checks=["check:rpm"])
+        self.assertFalse(os.path.exists(os.path.join(self.root, "dist")))
+
     def test_just_runner(self):
         sdk = FakeSdk()
         ar.deploy_release(self.root, "v1.1.0", preflight=["legal-check"], runner="just",
