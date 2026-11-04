@@ -58,6 +58,7 @@ All harbour apps share one mise task scheme (`dev:`, `phone:`, `cloud:`,
 | `scripts/sdk-rpm.sh` | `dev:build`, `phone:build`, `check:harbour` |
 | `scripts/release.py` | `release:prepare`: version, changelog, commit, tag `v<version>` |
 | `scripts/app_release.py` | `release:deploy`: RPMs for all architectures, Harbour check, source archive |
+| `scripts/rpm-payload-check.py` | `check:rpm`: legal documents and license texts inside a built RPM |
 | `scripts/cloud_release.py` | `cloud:build`, `cloud:release:prepare`/`deploy`: d0b bundle, tags `cloud-v<version>` |
 | `scripts/cloud-test-containers.sh` | `cloud:test:containers` |
 | `scripts/pb-get.sh` | `cloud:get`: PocketBase from `containers/build.env` |

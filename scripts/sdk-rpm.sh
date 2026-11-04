@@ -11,6 +11,10 @@
 # Runs from the app's root through mise: on the host with
 # SAILFISH_SDK_PATH (bin/sfdk), in the development VM
 # (IN_SAILFISH_SANDBOX=true) through the app's scripts/engine-exec.sh.
+#
+# SDK_RPM_DEFINES (the app's mise.toml [env]) holds rpm macros for every
+# build, "name value" separated by ";", e.g. "myapp_distribution 1".
+# Each becomes --define "name value" for rpmbuild.
 
 set -u
 
@@ -36,8 +40,28 @@ clean() {
 case $command in
     build)
         [ $# -eq 2 ] || usage
+        set --
+        old_ifs=$IFS
+        IFS=';'
+        set -f
+        for define in ${SDK_RPM_DEFINES:-}; do
+            # Trim surrounding blanks, so "a 1; b 2" works.
+            define=${define#"${define%%[! ]*}"}
+            define=${define%"${define##*[! ]}"}
+            case $define in
+                '') ;;
+                [A-Za-z_]*' '*)
+                    case ${define%% *} in *[!A-Za-z0-9_]*)
+                        echo "sdk-rpm.sh: SDK_RPM_DEFINES: bad macro name in '$define'" >&2; exit 2 ;;
+                    esac
+                    set -- "$@" --define "$define" ;;
+                *) echo "sdk-rpm.sh: SDK_RPM_DEFINES: '$define' is not 'name value'" >&2; exit 2 ;;
+            esac
+        done
+        set +f
+        IFS=$old_ifs
         clean
-        sdk build
+        if [ $# -gt 0 ]; then sdk build -- "$@"; else sdk build; fi
         status=$?
         # Cleaned up again, not just before the next run: the in-source
         # QtCreatorDeployment.txt names a binary in the project root that only

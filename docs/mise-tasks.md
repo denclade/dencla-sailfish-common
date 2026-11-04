@@ -49,6 +49,7 @@ Pflicht in jeder App; Name und Bedeutung genau so:
 | `check` | alles, was ohne Emulator scheitern kann |
 | `check:harbour` | Jollas Harbour-Prüfung auf das RPM von `dev:build` |
 | `check:legal` | Herausgeberangaben und Datenschutz streng prüfen ([legal.md](legal.md)) |
+| `check:rpm <rpm>` | Rechtstexte und Lizenzbeilage im fertigen RPM prüfen (`--rpm-check` von `release:deploy`) |
 | `dev:build`, `dev:deploy`, `dev:run`, `dev:screenshot`, `dev:logs`, `dev:ssh` | Emulator-Zyklus |
 | `release:prepare` | App-Version setzen, Commit, Tag `v<version>` |
 | `release:deploy` | App-Lieferung aus dem Tag bauen |
@@ -84,6 +85,7 @@ HOST_WORKSPACE_FOLDER = "…"        # aus .microvm-state/host-workspace
 # Was sich je App unterscheidet; die Tasks lesen es nur.
 DENCLA_COMMON = "3rdparty/dencla-sailfish-common"
 CLOUD_SERVICE = "<app>cloud"       # nur mit Server
+SDK_RPM_DEFINES = "<app>_distribution 1"   # nur wenn die .spec Makros braucht
 
 # --- Setup ---        vm, lupdate
 # --- Tests ---        test, test:one, test:setup, test:release
@@ -114,11 +116,17 @@ Apps kopieren: dann gehört sie hierher.
 | `scripts/cloud_release.py` | `cloud:build`, `cloud:release:prepare`, `cloud:release:deploy` |
 | `scripts/cloud-test-containers.sh` | `cloud:test:containers` |
 | `scripts/pb-get.sh` | `cloud:get` |
+| `scripts/rpm-payload-check.py` | `check:rpm` |
 | `scripts/capture-screenshot.py` | `dev:screenshot` |
 
 `sdk-rpm.sh` läuft aus der Wurzel der App: auf dem Host über
 `$SAILFISH_SDK_PATH/bin/sfdk`, in der VM (`IN_SAILFISH_SANDBOX=true`)
 über das `scripts/engine-exec.sh` der App.
+`SDK_RPM_DEFINES` aus `[env]` gibt jedem `build` rpm-Makros mit
+(`"name wert"`, mehrere mit `;` getrennt, je ein `--define`). So bauen
+`dev:build`, `phone:build`, `check:harbour` und `release:deploy` dasselbe
+Paket, ohne dass sich der Task-Text unterscheidet; Qt Creator ist nicht
+betroffen.
 
 Die Tasks im Wortlaut:
 

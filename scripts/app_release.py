@@ -3,11 +3,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Delivery of a harbour-* app release (tag v<version>), the release:deploy task.
 
-    app_release.py deploy <tag> [--preflight TASK]... [--arch ARCH]... [--runner mise|just]
+    app_release.py deploy <tag> [--preflight TASK]... [--prebuild TASK]... [--rpm-check TASK]...
+                         [--arch ARCH]... [--runner mise|just]
 
 Checks that the tag is v<Version: of rpm/<app>.spec>, the tree is clean
-and HEAD is the tag; runs the preflight tasks; builds the RPM and runs
-Jolla's Harbour check for each architecture (sdk-rpm.sh); writes the RPMs,
+and HEAD is the tag; runs the preflight tasks; for each architecture runs
+the --prebuild tasks (the SDK target as their argument), builds the RPM and
+runs Jolla's Harbour check (sdk-rpm.sh), then the --rpm-check tasks on the
+RPM (its path as their argument); writes the RPMs,
 a source archive with all submodules and SHA256SUMS to dist/<app>-<tag>/.
 Version and tag come from release.py (release:prepare); nothing here sets a
 version, pushes or uploads. See docs/releasing.md.
@@ -116,7 +119,8 @@ def run(command, root):
         raise ReleaseError(f"{' '.join(command)} failed")
 
 
-def deploy_release(root, tag, preflight=(), runner="mise", targets=None, run=run):
+def deploy_release(root, tag, preflight=(), runner="mise", targets=None, run=run, rpm_checks=(),
+                   prebuilds=()):
     validate_tag(tag)
     app = find_app(root)
     version, release = read_spec(root, app)
@@ -134,10 +138,19 @@ def deploy_release(root, tag, preflight=(), runner="mise", targets=None, run=run
         # Never pick up an RPM of an earlier build.
         if os.path.exists(path):
             os.remove(path)
+        # What the RPM build needs but cannot make itself, per target (a
+        # prebuilt library for this architecture); the tree check below
+        # covers these tasks too.
+        for task in prebuilds:
+            run(task_command(runner, task) + [target], root)
         run([sdk_rpm, "build", target], root)
         if not os.path.isfile(path):
             raise ReleaseError(f"the build for {target} did not produce RPMS/{name}")
         run([sdk_rpm, "check", target, f"RPMS/{name}"], root)
+        # App-specific checks of the package itself (payload, stripping); a
+        # preflight runs before any RPM exists.
+        for task in rpm_checks:
+            run(task_command(runner, task) + [f"RPMS/{name}"], root)
         rpms.append(path)
     # The build ran in the working tree; it must still be the tagged commit.
     assert_clean_worktree(root)
@@ -161,6 +174,12 @@ def options(argv):
     parser.add_argument("tag", help="v<Version: of the .spec>, e.g. v1.1.0")
     parser.add_argument("--preflight", metavar="TASK", action="append", default=[],
                         help="task that must pass before building, e.g. check:legal (repeatable)")
+    parser.add_argument("--prebuild", metavar="TASK", action="append", default=[],
+                        help="task run before each RPM build, the SDK target as the argument, "
+                             "e.g. rust:build:release (repeatable)")
+    parser.add_argument("--rpm-check", metavar="TASK", action="append", default=[],
+                        help="task run on each built RPM, its path as the argument, "
+                             "e.g. check:rpm (repeatable)")
     parser.add_argument("--arch", action="append", choices=ARCHES,
                         help=f"architecture to build (repeatable; default: {' '.join(ARCHES)})")
     parser.add_argument("--runner", choices=("mise", "just"), default="mise",
@@ -174,7 +193,8 @@ def main(argv):
     try:
         root = os.path.abspath(args.root) if args.root else git(os.getcwd(), "rev-parse", "--show-toplevel")
         out = deploy_release(root, args.tag, args.preflight, args.runner,
-                             sdk_targets(args.arch or ARCHES))
+                             sdk_targets(args.arch or ARCHES), rpm_checks=args.rpm_check,
+                             prebuilds=args.prebuild)
         print(f"-> {os.path.relpath(out, root)}/")
         for name in regular_files(out):
             print(f"   {name}")
