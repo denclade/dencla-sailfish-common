@@ -76,7 +76,8 @@ nicht auf dem Tag steht. Dann:
 1. `--preflight`-Tasks (z. B. `check:legal`),
 2. für aarch64, armv7hl und i486 (`--arch` schränkt ein; das SDK-Release
    kommt aus `SAILFISH_SDK_TARGET`) das RPM mit `scripts/sdk-rpm.sh`
-   bauen, Tests im `%check` inklusive, und Jollas Harbour-Prüfung darauf,
+   bauen (mit den Makros aus `SDK_RPM_DEFINES`), Tests im `%check`
+   inklusive, und Jollas Harbour-Prüfung darauf,
 3. prüfen, dass der Build den Arbeitsbaum nicht verändert hat,
 4. `dist/<app>-<tag>/` neu anlegen: die RPMs, das Quellarchiv
    `<app>-X.Y.Z-source.tar.bz2` mit allen Submodulen an den referenzierten

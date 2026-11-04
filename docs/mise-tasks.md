@@ -84,6 +84,7 @@ HOST_WORKSPACE_FOLDER = "…"        # aus .microvm-state/host-workspace
 # Was sich je App unterscheidet; die Tasks lesen es nur.
 DENCLA_COMMON = "3rdparty/dencla-sailfish-common"
 CLOUD_SERVICE = "<app>cloud"       # nur mit Server
+SDK_RPM_DEFINES = "<app>_distribution 1"   # nur wenn die .spec Makros braucht
 
 # --- Setup ---        vm, lupdate
 # --- Tests ---        test, test:one, test:setup, test:release
@@ -119,6 +120,11 @@ Apps kopieren: dann gehört sie hierher.
 `sdk-rpm.sh` läuft aus der Wurzel der App: auf dem Host über
 `$SAILFISH_SDK_PATH/bin/sfdk`, in der VM (`IN_SAILFISH_SANDBOX=true`)
 über das `scripts/engine-exec.sh` der App.
+`SDK_RPM_DEFINES` aus `[env]` gibt jedem `build` rpm-Makros mit
+(`"name wert"`, mehrere mit `;` getrennt, je ein `--define`). So bauen
+`dev:build`, `phone:build`, `check:harbour` und `release:deploy` dasselbe
+Paket, ohne dass sich der Task-Text unterscheidet; Qt Creator ist nicht
+betroffen.
 
 Die Tasks im Wortlaut:
 

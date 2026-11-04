@@ -165,5 +165,47 @@ class Deploy(unittest.TestCase):
             ar.deploy_release(self.root, "v1.1.0", run=no_rpm, targets=TARGETS[1:])
 
 
+class SdkRpm(unittest.TestCase):
+    """scripts/sdk-rpm.sh against a stand-in sfdk that records its arguments."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.log = os.path.join(self.root, "args")
+        sfdk = os.path.join(self.root, "sdk", "bin", "sfdk")
+        write(self.root, "sdk/bin/sfdk", f'#!/bin/sh\nprintf "%s\\n" "$@" >"{self.log}"\n')
+        os.chmod(sfdk, 0o755)
+
+    def build(self, defines=None):
+        env = dict(os.environ, SAILFISH_SDK_PATH=os.path.join(self.root, "sdk"))
+        env.pop("IN_SAILFISH_SANDBOX", None)
+        env.pop("SDK_RPM_DEFINES", None)
+        if defines is not None:
+            env["SDK_RPM_DEFINES"] = defines
+        return subprocess.run([os.path.join(SCRIPTS, "sdk-rpm.sh"), "build", TARGETS[1]],
+                              cwd=self.root, env=env, capture_output=True, text=True)
+
+    def args(self):
+        with open(self.log) as f:
+            return f.read().splitlines()
+
+    def test_plain_build(self):
+        self.assertEqual(self.build().returncode, 0)
+        self.assertEqual(self.args(), ["-c", f"target={TARGETS[1]}", "build"])
+
+    def test_defines_reach_rpmbuild(self):
+        self.assertEqual(self.build("demo_distribution 1; ;other_flag x y").returncode, 0)
+        self.assertEqual(self.args(), ["-c", f"target={TARGETS[1]}", "build", "--",
+                                       "--define", "demo_distribution 1",
+                                       "--define", "other_flag x y"])
+
+    def test_bad_define_fails_before_building(self):
+        for bad in ("novalue", "bad-name 1", "1x 1"):
+            result = self.build(bad)
+            self.assertEqual(result.returncode, 2, bad)
+            self.assertIn("SDK_RPM_DEFINES", result.stderr)
+        self.assertFalse(os.path.exists(self.log))
+
+
 if __name__ == "__main__":
     unittest.main()
