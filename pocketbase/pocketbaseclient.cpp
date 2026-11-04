@@ -94,11 +94,14 @@ void PocketBaseClient::finish(QNetworkReply *reply,
 
 void PocketBaseClient::postJson(const QString &path, const QJsonObject &body,
                                 const std::function<void(const QByteArray &, const QString &)> &handler,
-                                bool authorized)
+                                bool authorized, const QByteArray &deviceToken)
 {
     QNetworkRequest req = request(path);
     if (!authorized) {
         req.setRawHeader("Authorization", QByteArray());
+    }
+    if (!deviceToken.isEmpty()) {
+        req.setRawHeader("X-Device-Token", deviceToken);
     }
     req.setHeader(QNetworkRequest::ContentTypeHeader, QByteArray("application/json"));
     finish(m_network->post(req, QJsonDocument(body).toJson(QJsonDocument::Compact)), handler);
@@ -145,9 +148,18 @@ void PocketBaseClient::logIn(const QString &email, const QString &password, cons
                      return;
                  }
                  m_session = sessionFrom(reply);
+                 const QString token = QJsonDocument::fromJson(reply)
+                                           .object()
+                                           .value(QStringLiteral("meta"))
+                                           .toObject()
+                                           .value(QStringLiteral("deviceToken"))
+                                           .toString();
+                 if (!token.isEmpty()) {
+                     m_deviceToken = token;
+                 }
                  done(m_session, m_session.isValid() ? QString() : tr("The server sent no session."));
              },
-             false);
+             false, m_deviceToken.toUtf8());
 }
 
 void PocketBaseClient::refreshSession(const SessionDone &done)

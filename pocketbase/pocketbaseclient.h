@@ -62,6 +62,13 @@ public:
     void setUserAgent(const QByteArray &userAgent) { m_userAgent = userAgent; }
     void setSession(const Session &session) { m_session = session; }
     Session session() const { return m_session; }
+    // An opaque token a server may hand out at login (meta.deviceToken in
+    // the auth response) to know this device next time: logIn() sends it
+    // as X-Device-Token and keeps what comes back. harbour-fitfish's login
+    // alerts use it (docs/login-alerts.md there); a server without them
+    // sends none, and the token stays as it is. Keep it with the session.
+    void setDeviceToken(const QString &token) { m_deviceToken = token; }
+    QString deviceToken() const { return m_deviceToken; }
     // Aborts requests still running after this long. Default 30 s.
     void setTimeoutMs(int ms) { m_timeoutMs = ms; }
 
@@ -95,13 +102,15 @@ private:
     // Calls `handler` once with the reply's body and error ("" if none).
     void finish(QNetworkReply *reply, const std::function<void(const QByteArray &, const QString &)> &handler);
     void postJson(const QString &path, const QJsonObject &body,
-                  const std::function<void(const QByteArray &, const QString &)> &handler, bool authorized);
+                  const std::function<void(const QByteArray &, const QString &)> &handler, bool authorized,
+                  const QByteArray &deviceToken = QByteArray());
     static Session sessionFrom(const QByteArray &body);
 
     QNetworkAccessManager *m_network;
     QUrl m_baseUrl;
     QByteArray m_userAgent;
     Session m_session;
+    QString m_deviceToken;
     int m_timeoutMs = 30000;
 };
 
